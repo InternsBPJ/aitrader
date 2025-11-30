@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Details - AiTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .profit-positive { color: #10b981; }
+        .profit-negative { color: #ef4444; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(30, 58, 138, 0.3);
+            border-radius: 50%;
+            border-top-color: #1e3a8a;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .coin-animation {
+            animation: coinBounce 2s infinite;
+        }
+        @keyframes coinBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-3px) rotate(5deg); }
+            50% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(-2px) rotate(-5deg); }
+        }
+        .pulse-profit {
+            animation: pulseProfit 2s infinite;
+        }
+        @keyframes pulseProfit {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+        }
+        .transaction-item:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">AiTrader</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-robot mr-3"></i>Trading Bots
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-wallet mr-3"></i>My Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="hover:text-green-300 transition-colors">Trading Bots</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="hover:text-green-300 transition-colors">My Investments</a>
+                    <a href="transactions.html" class="hover:text-green-300 transition-colors">Transactions</a>
+                    <a href="deposit.html" class="hover:text-green-300 transition-colors">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="investment-details.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-chart-bar text-lg mb-1"></i>
+                <span class="text-xs">Details</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading investment details...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">Investment Details</h1>
+            <p class="text-gray-600 text-sm lg:text-base">Live trading simulation and performance analytics</p>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Investment Info -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Investment Overview -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl lg:text-2xl font-semibold text-gray-900" id="botName">Trading Bot</h2>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold" id="statusBadge">Active</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-600 text-sm">Amount Invested</p>
+                            <p class="text-lg font-bold text-green-600" id="investmentAmount">UGX 0</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-600 text-sm">Daily Return</p>
+                            <p class="text-lg font-bold text-blue-600" id="dailyReturn">0%</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-600 text-sm">Days Completed</p>
+                            <p class="text-lg font-bold text-purple-600" id="daysCompleted">0/0</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-600 text-sm">Total Returns</p>
+                            <p class="text-lg font-bold text-green-600" id="totalReturns">UGX 0</p>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>Investment Progress</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="progress-bar h-2 rounded-full" id="progressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Next Return Countdown -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-blue-700 font-semibold text-sm">Next Daily Return</p>
+                                <p class="text-green-600 font-bold text-lg" id="nextReturnAmount">UGX 0</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-blue-700 font-semibold text-sm">Countdown</p>
+                                <p class="text-blue-800 font-bold text-lg" id="nextReturnCountdown">00:00:00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trading Activity -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg lg:text-xl font-semibold mb-4 text-gray-900">Live Trading Activity</h3>
+                    <div class="space-y-3" id="tradingActivity">
+                        <div class="text-center py-6 text-gray-500">
+                            <div class="loading mx-auto mb-2"></div>
+                            Loading trading activity...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Investment Actions -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900">Investment Actions</h3>
+                    <div class="space-y-3">
+                        <button onclick="closeInvestment()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg transition-colors text-sm">
+                            <i class="fas fa-times mr-2"></i>Close Investment Early
+                        </button>
+                        <button onclick="reinvestReturns()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg transition-colors text-sm">
+                            <i class="fas fa-redo mr-2"></i>Reinvest Returns
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Investment Details -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900">Investment Details</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Start Date:</span>
+                            <span class="font-semibold" id="startDate">-</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Period:</span>
+                            <span class="font-semibold" id="investmentPeriod">0 days</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Expected Total:</span>
+                            <span class="font-semibold text-green-600" id="expectedTotal">UGX 0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Investment ID:</span>
+                            <span class="font-mono text-xs" id="investmentId">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Stats -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-900">Performance Stats</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Current Value:</span>
+                            <span class="font-semibold text-green-600" id="currentValue">UGX 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">Profit/Loss:</span>
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-coins text-yellow-500 coin-animation"></i>
+                                <span class="font-semibold text-green-600 pulse-profit" id="profitLoss">UGX 0</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">ROI:</span>
+                            <span class="font-semibold text-green-600" id="roiPercentage">0%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Live Earnings:</span>
+                            <span class="font-semibold text-green-600" id="liveEarnings">+UGX 0/min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Earnings Counter -->
+                <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 lg:p-6 card-hover text-white">
+                    <div class="text-center">
+                        <div class="flex justify-center mb-3">
+                            <i class="fas fa-chart-line text-2xl text-white"></i>
+                        </div>
+                        <h4 class="text-lg font-semibold mb-2">Live Earnings</h4>
+                        <div class="text-xl font-bold mb-2" id="liveCounter">UGX 0</div>
+                        <p class="text-green-100 text-sm">Growing every minute</p>
+                        <div class="mt-3 flex justify-center space-x-1">
+                            <i class="fas fa-coins text-yellow-300 text-sm"></i>
+                            <i class="fas fa-coins text-yellow-300 text-sm"></i>
+                            <i class="fas fa-coins text-yellow-300 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Database Manager
+        const DatabaseManager = {
+            async closeInvestment(investmentId, userId) {
+                try {
+                    console.log('Closing investment:', investmentId, 'for user:', userId);
+                    
+                    // First get the investment details
+                    const { data: investment, error: fetchError } = await supabase
+                        .from('investments')
+                        .select('*')
+                        .eq('id', investmentId)
+                        .eq('user_id', userId)
+                        .single();
+
+                    if (fetchError) {
+                        console.error('Error fetching investment:', fetchError);
+                        throw new Error('Investment not found: ' + fetchError.message);
+                    }
+
+                    if (!investment) {
+                        throw new Error('Investment not found');
+                    }
+
+                    // Calculate 10% penalty
+                    const investedAmount = investment.amount || 0;
+                    const penalty = investedAmount * 0.10; // 10% penalty
+                    const returnedAmount = investedAmount - penalty;
+
+                    console.log(`Investment: ${investedAmount}, Penalty: ${penalty}, Returned: ${returnedAmount}`);
+
+                    // Update investment status
+                    const { data: updatedInvestment, error: updateError } = await supabase
+                        .from('investments')
+                        .update({ 
+                            status: 'closed'
+                        })
+                        .eq('id', investmentId)
+                        .eq('user_id', userId)
+                        .select()
+                        .single();
+
+                    if (updateError) {
+                        console.error('Error updating investment:', updateError);
+                        throw new Error('Failed to update investment: ' + updateError.message);
+                    }
+
+                    // Get current user balance
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('balance')
+                        .eq('id', userId)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching profile:', profileError);
+                        // Continue anyway, we'll try to update balance
+                    }
+
+                    const currentBalance = profile?.balance || 0;
+                    const newBalance = currentBalance + returnedAmount;
+
+                    // Update user balance
+                    const { error: balanceError } = await supabase
+                        .from('profiles')
+                        .update({ 
+                            balance: newBalance
+                        })
+                        .eq('id', userId);
+
+                    if (balanceError) {
+                        console.error('Error updating balance:', balanceError);
+                        throw new Error('Failed to update balance: ' + balanceError.message);
+                    }
+
+                    // Create transaction record for the returned investment (with penalty)
+                    const { error: txError } = await supabase
+                        .from('transactions')
+                        .insert([{
+                            user_id: userId,
+                            type: 'investment_return',
+                            amount: returnedAmount,
+                            description: `Investment closed early - 10% penalty applied (UGX ${penalty.toLocaleString()}) - ${investment.bot_name || 'Trading Bot'}`,
+                            status: 'completed',
+                            reference: `CLS${Date.now()}`,
+                            created_at: new Date().toISOString()
+                        }]);
+
+                    if (txError) {
+                        console.error('Error creating transaction:', txError);
+                        // Don't throw, just log - the main operation succeeded
+                    }
+
+                    return {
+                        success: true,
+                        investment: updatedInvestment,
+                        investedAmount: investedAmount,
+                        penalty: penalty,
+                        returnedAmount: returnedAmount
+                    };
+
+                } catch (error) {
+                    console.error('Error in closeInvestment:', error);
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            },
+
+            async getInvestmentDetails(investmentId, userId) {
+                try {
+                    const { data: investment, error } = await supabase
+                        .from('investments')
+                        .select('*')
+                        .eq('id', investmentId)
+                        .eq('user_id', userId)
+                        .single();
+
+                    if (error) throw error;
+                    return investment;
+
+                } catch (error) {
+                    console.error('Error fetching investment:', error);
+                    return null;
+                }
+            },
+
+            async getUserProfile(userId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userId)
+                        .single();
+
+                    if (error) throw error;
+                    return data;
+
+                } catch (error) {
+                    console.error('Error fetching user profile:', error);
+                    return null;
+                }
+            }
+        };
+
+        // Investment Details Manager
+        const InvestmentDetailsManager = {
+            currentInvestment: null,
+            countdownInterval: null,
+            profitCounterInterval: null,
+            currentUser: null,
+            userProfile: null,
+            liveProfit: 0,
+            earningsPerMinute: 0,
+            baseProfit: 0,
+
+            async init() {
+                try {
+                    console.log('Initializing investment details page...');
+                    
+                    // Check authentication first
+                    const authSuccess = await this.checkAuthentication();
+                    if (!authSuccess) return;
+                    
+                    // Load investment details
+                    await this.loadInvestmentDetails();
+                    
+                    // Show main content
+                    this.showContent();
+                    
+                    // Start countdown
+                    this.startCountdown();
+                    
+                    // Start live profit counter
+                    this.startLiveProfitCounter();
+                    
+                    console.log('Investment details page initialized successfully');
+                    
+                } catch (error) {
+                    console.error('Investment details initialization failed:', error);
+                    this.showError('Error loading investment details: ' + error.message);
+                }
+            },
+
+            async checkAuthentication() {
+                console.log('Checking authentication...');
+                
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error) {
+                        console.error('Session error:', error);
+                        throw new Error('Authentication failed');
+                    }
+                    
+                    if (!session) {
+                        console.error('No session found');
+                        this.redirectToLogin();
+                        return false;
+                    }
+
+                    this.currentUser = session.user;
+                    this.userProfile = await DatabaseManager.getUserProfile(session.user.id);
+
+                    console.log('User authenticated:', session.user.email);
+                    this.updateUserWelcome(session.user);
+                    this.updateBalanceDisplay();
+                    return true;
+
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    this.redirectToLogin();
+                    return false;
+                }
+            },
+
+            updateBalanceDisplay() {
+                const balance = (this.userProfile?.balance || 0);
+                document.getElementById('headerBalance').textContent = `UGX ${balance.toLocaleString()}`;
+                document.getElementById('mobileBalance').textContent = `UGX ${balance.toLocaleString()}`;
+            },
+
+            async loadInvestmentDetails() {
+                // Get investment ID from URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const investmentId = urlParams.get('id');
+                
+                console.log('Loading investment details for ID:', investmentId);
+                
+                if (!investmentId) {
+                    throw new Error('No investment ID provided in URL');
+                }
+
+                try {
+                    const investment = await DatabaseManager.getInvestmentDetails(investmentId, this.currentUser.id);
+
+                    if (!investment) {
+                        throw new Error('Investment not found');
+                    }
+
+                    console.log('Investment loaded successfully:', investment);
+                    this.currentInvestment = investment;
+                    this.displayInvestmentDetails();
+
+                } catch (error) {
+                    console.error('Error loading investment details:', error);
+                    throw error;
+                }
+            },
+
+            showContent() {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+            },
+
+            showError(message) {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                alert('Error: ' + message + '\n\nRedirecting to investments page...');
+                setTimeout(() => {
+                    window.location.href = 'investments.html';
+                }, 3000);
+            },
+
+            displayInvestmentDetails() {
+                const inv = this.currentInvestment;
+                if (!inv) return;
+
+                console.log('Displaying investment details:', inv);
+
+                const invested = inv.amount || 0;
+                const returns = inv.total_returns || 0;
+                const currentValue = invested + returns;
+                const progress = inv.days_completed ? (inv.days_completed / inv.period) * 100 : 0;
+                const roi = invested > 0 ? ((returns / invested) * 100).toFixed(1) : 0;
+                
+                // Calculate expected total return
+                const totalExpectedReturn = invested + (invested * inv.daily_return * inv.period) / 100;
+                
+                // Calculate next return amount
+                const nextReturnAmount = (invested * inv.daily_return) / 100;
+
+                // Calculate earnings per minute (daily return divided by minutes in a day)
+                this.earningsPerMinute = nextReturnAmount / (24 * 60);
+                this.baseProfit = returns;
+                this.liveProfit = returns;
+
+                // Update DOM elements
+                document.getElementById('botName').textContent = inv.bot_name || 'Trading Bot';
+                document.getElementById('investmentAmount').textContent = `UGX ${invested.toLocaleString()}`;
+                document.getElementById('dailyReturn').textContent = `${inv.daily_return}%`;
+                document.getElementById('daysCompleted').textContent = `${inv.days_completed || 0}/${inv.period}`;
+                document.getElementById('totalReturns').textContent = `UGX ${returns.toLocaleString()}`;
+                document.getElementById('progressPercent').textContent = `${progress.toFixed(1)}%`;
+                document.getElementById('progressBar').style.width = `${progress}%`;
+                document.getElementById('nextReturnAmount').textContent = `UGX ${nextReturnAmount.toLocaleString()}`;
+                document.getElementById('startDate').textContent = new Date(inv.created_at).toLocaleDateString();
+                document.getElementById('investmentPeriod').textContent = `${inv.period} days`;
+                document.getElementById('expectedTotal').textContent = `UGX ${totalExpectedReturn.toLocaleString()}`;
+                document.getElementById('investmentId').textContent = inv.id.substring(0, 8) + '...';
+                document.getElementById('currentValue').textContent = `UGX ${currentValue.toLocaleString()}`;
+                document.getElementById('profitLoss').textContent = `UGX ${this.liveProfit.toLocaleString()}`;
+                document.getElementById('roiPercentage').textContent = `${roi}%`;
+                document.getElementById('liveEarnings').textContent = `+UGX ${this.earningsPerMinute.toFixed(2)}/min`;
+                document.getElementById('liveCounter').textContent = `UGX ${this.liveProfit.toLocaleString()}`;
+
+                // Update status badge
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = inv.status === 'active' ? 'Active' : 
+                                         inv.status === 'completed' ? 'Completed' : 'Closed';
+                statusBadge.className = `px-3 py-1 rounded-full text-sm font-semibold ${
+                    inv.status === 'active' ? 'bg-green-100 text-green-800' :
+                    inv.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                }`;
+
+                // Generate trading activity
+                this.generateTradingActivity();
+            },
+
+            startCountdown() {
+                this.updateCountdown();
+                this.countdownInterval = setInterval(() => {
+                    this.updateCountdown();
+                }, 1000);
+            },
+
+            updateCountdown() {
+                if (!this.currentInvestment?.last_return_date) {
+                    document.getElementById('nextReturnCountdown').textContent = '00:00:00';
+                    return;
+                }
+
+                try {
+                    const lastReturn = new Date(this.currentInvestment.last_return_date);
+                    const nextReturn = new Date(lastReturn);
+                    nextReturn.setHours(nextReturn.getHours() + 24);
+                    
+                    const now = new Date();
+                    const timeDiff = nextReturn - now;
+                    
+                    if (timeDiff <= 0) {
+                        document.getElementById('nextReturnCountdown').textContent = 'Processing...';
+                        return;
+                    }
+                    
+                    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                    
+                    document.getElementById('nextReturnCountdown').textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                } catch (error) {
+                    console.error('Countdown error:', error);
+                    document.getElementById('nextReturnCountdown').textContent = 'Error';
+                }
+            },
+
+            startLiveProfitCounter() {
+                // Update every second for smooth animation
+                this.profitCounterInterval = setInterval(() => {
+                    if (this.currentInvestment?.status === 'active') {
+                        // Add earnings per second (earnings per minute divided by 60)
+                        this.liveProfit += this.earningsPerMinute / 60;
+                        
+                        // Update the profit/loss display
+                        document.getElementById('profitLoss').textContent = `UGX ${Math.floor(this.liveProfit).toLocaleString()}`;
+                        document.getElementById('liveCounter').textContent = `UGX ${Math.floor(this.liveProfit).toLocaleString()}`;
+                        
+                        // Update current value (investment amount + live profit)
+                        const invested = this.currentInvestment.amount || 0;
+                        const currentValue = invested + this.liveProfit;
+                        document.getElementById('currentValue').textContent = `UGX ${Math.floor(currentValue).toLocaleString()}`;
+                        
+                        // Update ROI
+                        const roi = invested > 0 ? ((this.liveProfit / invested) * 100).toFixed(2) : 0;
+                        document.getElementById('roiPercentage').textContent = `${roi}%`;
+                        
+                        // Add occasional coin animation
+                        if (Math.random() < 0.1) { // 10% chance every second
+                            this.triggerCoinAnimation();
+                        }
+                    }
+                }, 1000);
+            },
+
+            triggerCoinAnimation() {
+                const profitElement = document.getElementById('profitLoss');
+                profitElement.classList.add('pulse-profit');
+                setTimeout(() => {
+                    profitElement.classList.remove('pulse-profit');
+                }, 1000);
+            },
+
+            generateTradingActivity() {
+                const activityContainer = document.getElementById('tradingActivity');
+                activityContainer.innerHTML = '';
+                
+                const tradingPairs = ['BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT'];
+                const activities = [];
+                
+                // Generate realistic trading activities
+                for (let i = 0; i < 5; i++) {
+                    const isProfit = Math.random() > 0.3;
+                    const amount = (Math.random() * 2000 + 500).toFixed(0);
+                    const pair = tradingPairs[Math.floor(Math.random() * tradingPairs.length)];
+                    const type = Math.random() > 0.5 ? 'Buy' : 'Sell';
+                    const timeAgo = ['Just now', '1 min ago', '2 mins ago', '5 mins ago'][Math.floor(Math.random() * 4)];
+                    
+                    activities.push(`
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 transaction-item">
+                            <div class="flex items-center space-x-3">
+                                <div class="${isProfit ? 'bg-green-100' : 'bg-red-100'} p-2 rounded">
+                                    <i class="fas fa-${isProfit ? 'arrow-up text-green-600' : 'arrow-down text-red-600'}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-sm">${pair}</div>
+                                    <div class="text-gray-500 text-xs">${type} Order • Market</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'} text-sm">${isProfit ? '+' : '-'}UGX ${amount}</div>
+                                <div class="text-gray-500 text-xs">${timeAgo}</div>
+                            </div>
+                        </div>
+                    `);
+                }
+                
+                activityContainer.innerHTML = activities.join('');
+            },
+
+            async closeInvestment() {
+                if (!this.currentInvestment) return;
+
+                const investedAmount = this.currentInvestment.amount || 0;
+                const penalty = investedAmount * 0.10;
+                const returnedAmount = investedAmount - penalty;
+
+                const confirmationMessage = `Are you sure you want to close this investment early?\n\n` +
+                    `Original Investment: UGX ${investedAmount.toLocaleString()}\n` +
+                    `Early Closure Penalty (10%): UGX ${penalty.toLocaleString()}\n` +
+                    `Amount to be returned: UGX ${returnedAmount.toLocaleString()}\n\n` +
+                    `This action cannot be undone.`;
+
+                if (!confirm(confirmationMessage)) {
+                    return;
+                }
+
+                try {
+                    const result = await DatabaseManager.closeInvestment(
+                        this.currentInvestment.id, 
+                        this.currentUser.id
+                    );
+                    
+                    if (result.success) {
+                        const successMessage = `Investment closed successfully!\n\n` +
+                            `UGX ${returnedAmount.toLocaleString()} has been returned to your balance.\n` +
+                            `A penalty of UGX ${penalty.toLocaleString()} was applied for early closure.`;
+                        
+                        this.showNotification(successMessage, 'success');
+                        
+                        // Stop the live profit counter
+                        if (this.profitCounterInterval) {
+                            clearInterval(this.profitCounterInterval);
+                        }
+                        
+                        // Update the current investment status
+                        this.currentInvestment.status = 'closed';
+                        this.displayInvestmentDetails();
+                        
+                        // Refresh user profile and balance display
+                        this.userProfile = await DatabaseManager.getUserProfile(this.currentUser.id);
+                        this.updateBalanceDisplay();
+                        
+                        // Redirect after delay
+                        setTimeout(() => {
+                            window.location.href = 'investments.html';
+                        }, 3000);
+                    } else {
+                        throw new Error(result.error || 'Failed to close investment');
+                    }
+
+                } catch (error) {
+                    console.error('Error closing investment:', error);
+                    this.showNotification('Failed to close investment: ' + error.message, 'error');
+                }
+            },
+
+            async reinvestReturns() {
+                if (!this.currentInvestment) return;
+
+                const returns = this.currentInvestment.total_returns || 0;
+                if (returns <= 0) {
+                    this.showNotification('No returns available to reinvest', 'warning');
+                    return;
+                }
+
+                this.showNotification('Reinvestment feature coming soon!', 'info');
+            },
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-600' : 
+                    type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                } text-white max-w-sm`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            },
+
+            updateUserWelcome(user) {
+                const welcomeName = user.email?.split('@')[0] || 'Trader';
+                document.getElementById('userWelcome').textContent = `Welcome, ${welcomeName}`;
+                document.getElementById('mobileUserWelcome').textContent = `Welcome, ${welcomeName}`;
+            },
+
+            redirectToLogin() {
+                alert('Please login to continue');
+                window.location.href = 'login.html';
+            }
+        };
+
+        // Global functions
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('open');
+        }
+
+        function refreshInvestment() {
+            InvestmentDetailsManager.loadInvestmentDetails()
+                .then(() => {
+                    InvestmentDetailsManager.showNotification('Investment data refreshed!', 'success');
+                })
+                .catch(error => {
+                    InvestmentDetailsManager.showNotification('Failed to refresh investment', 'error');
+                });
+        }
+
+        function closeInvestment() {
+            InvestmentDetailsManager.closeInvestment();
+        }
+
+        function reinvestReturns() {
+            InvestmentDetailsManager.reinvestReturns();
+        }
+
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            });
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, starting initialization...');
+            InvestmentDetailsManager.init();
+        });
+
+        // Clean up intervals when leaving the page
+        window.addEventListener('beforeunload', () => {
+            if (InvestmentDetailsManager.countdownInterval) {
+                clearInterval(InvestmentDetailsManager.countdownInterval);
+            }
+            if (InvestmentDetailsManager.profitCounterInterval) {
+                clearInterval(InvestmentDetailsManager.profitCounterInterval);
+            }
+        });
+
+        // Close mobile menu when clicking on backdrop
+        document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+    </script>
+</body>
+</html>

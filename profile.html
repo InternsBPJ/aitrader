@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - AiTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(30, 58, 138, 0.3);
+            border-radius: 50%;
+            border-top-color: #1e3a8a;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+        }
+        .transaction-item:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+        .team-member-card {
+            border-left: 4px solid #3b82f6;
+        }
+        .status-active {
+            color: #10b981;
+        }
+        .status-suspended {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">AiTrader</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-robot mr-3"></i>Trading Bots
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-wallet mr-3"></i>My Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="hover:text-green-300 transition-colors">Trading Bots</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="hover:text-green-300 transition-colors">My Investments</a>
+                    <a href="transactions.html" class="hover:text-green-300 transition-colors">Transactions</a>
+                    <a href="deposit.html" class="hover:text-green-300 transition-colors">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="profile.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-user text-lg mb-1"></i>
+                <span class="text-xs">Profile</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading profile...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">My Profile</h1>
+            <p class="text-gray-600 text-sm lg:text-base">Manage your account information and team</p>
+        </div>
+
+        <!-- Balance Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl p-4 card-hover text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-200 text-sm">Current Balance</p>
+                        <h2 class="text-xl lg:text-2xl font-bold" id="currentBalance">UGX 0</h2>
+                    </div>
+                    <i class="fas fa-wallet text-xl text-blue-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Trading Status</p>
+                        <h2 class="text-xl lg:text-2xl font-bold" id="tradingStatus">Active</h2>
+                    </div>
+                    <i class="fas fa-chart-line text-xl" id="tradingStatusIcon"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Member Since</p>
+                        <h2 class="text-xl lg:text-2xl font-bold text-gray-800" id="memberSince">-</h2>
+                    </div>
+                    <i class="fas fa-calendar text-xl text-blue-500"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Information -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Personal Info -->
+            <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                <h3 class="text-lg lg:text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-user-circle mr-2 text-blue-500"></i>
+                    Personal Information
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Full Name:</span>
+                        <span class="text-gray-800 font-semibold text-right text-sm" id="profileFullName">-</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Email:</span>
+                        <span class="text-gray-800 font-semibold text-right text-sm" id="profileEmail">-</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Phone:</span>
+                        <span class="text-gray-800 font-semibold text-right text-sm" id="profilePhone">-</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Username:</span>
+                        <span class="text-gray-800 font-semibold text-right text-sm" id="profileUsername">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referral & Account Info -->
+            <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                <h3 class="text-lg lg:text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-share-alt mr-2 text-green-500"></i>
+                    Referral Information
+                </h3>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Your Referral Code:</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-blue-600 font-bold text-sm" id="referralCode">-</span>
+                            <button onclick="copyReferralCode()" class="text-blue-500 hover:text-blue-700">
+                                <i class="fas fa-copy text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-gray-600 font-medium text-sm">Referred By:</span>
+                        <span class="text-gray-800 font-semibold text-sm" id="referredBy">-</span>
+                    </div>
+                    
+                    <div class="bg-blue-50 p-3 rounded-lg mt-3">
+                        <h4 class="font-semibold text-blue-800 mb-2 text-sm">Share your referral code:</h4>
+                        <p class="text-sm text-blue-600 mb-2">
+                            Earn rewards when friends sign up using your code!
+                        </p>
+                        <div class="flex space-x-2">
+                            <input type="text" id="referralLink" readonly 
+                                class="flex-1 px-3 py-2 border border-blue-300 rounded text-xs bg-white">
+                            <button onclick="copyReferralLink()" 
+                                class="bg-blue-600 text-white px-3 py-2 rounded text-xs hover:bg-blue-700">
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Members Section -->
+        <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm mb-6">
+            <h3 class="text-lg lg:text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-users mr-2 text-purple-500"></i>
+                Your Team
+            </h3>
+            
+            <div id="teamList" class="space-y-3">
+                <!-- Team members will be dynamically added here -->
+                <div class="text-center py-6 text-gray-500" id="noTeamMessage">
+                    <i class="fas fa-users text-3xl mb-3 opacity-50"></i>
+                    <p class="text-sm">No team members yet. Share your referral link to build your team!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+            <h3 class="text-lg lg:text-xl font-bold text-gray-800 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button onclick="goToDashboard()" class="bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-sm">
+                    <i class="fas fa-chart-line mr-2"></i> Trading Dashboard
+                </button>
+                <button onclick="goToDeposit()" class="bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center text-sm">
+                    <i class="fas fa-plus mr-2"></i> Deposit Funds
+                </button>
+                <button onclick="goToWithdraw()" class="bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition flex items-center justify-center text-sm">
+                    <i class="fas fa-minus mr-2"></i> Withdraw Funds
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notifications -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let userProfile = null;
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Utility Functions
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `p-4 rounded-lg text-white shadow-lg mb-2 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Format UGX currency
+        function formatUGX(amount) {
+            return `UGX ${parseFloat(amount || 0).toLocaleString('en-UG')}`;
+        }
+
+        // Update trading status display
+        function updateTradingStatus(status) {
+            const statusElement = document.getElementById('tradingStatus');
+            const statusIcon = document.getElementById('tradingStatusIcon');
+            
+            if (status && status.toLowerCase() === 'suspended') {
+                statusElement.textContent = 'Suspended';
+                statusElement.className = 'text-xl lg:text-2xl font-bold status-suspended';
+                statusIcon.className = 'fas fa-ban text-xl status-suspended';
+            } else {
+                statusElement.textContent = 'Active';
+                statusElement.className = 'text-xl lg:text-2xl font-bold status-active';
+                statusIcon.className = 'fas fa-chart-line text-xl status-active';
+            }
+        }
+
+        async function loadUserProfile() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Get user profile
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (error) throw error;
+
+                userProfile = profile;
+                updateProfileDisplay(profile);
+                
+                // Load team members
+                await loadTeamMembers(profile.personal_referral_code);
+                
+                // Show main content
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                showNotification('Error loading profile data', 'error');
+            }
+        }
+
+        async function loadTeamMembers(referralCode) {
+            if (!referralCode) return;
+            
+            try {
+                const { data: teamMembers, error } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, email, created_at, balance, status')
+                    .eq('referred_by', referralCode);
+                
+                if (error) throw error;
+                
+                displayTeamMembers(teamMembers);
+            } catch (error) {
+                console.error('Error loading team members:', error);
+            }
+        }
+
+        function displayTeamMembers(teamMembers) {
+            const teamList = document.getElementById('teamList');
+            const noTeamMessage = document.getElementById('noTeamMessage');
+            
+            if (teamMembers && teamMembers.length > 0) {
+                noTeamMessage.style.display = 'none';
+                
+                teamList.innerHTML = teamMembers.map(member => {
+                    const statusClass = member.status && member.status.toLowerCase() === 'suspended' 
+                        ? 'status-suspended' 
+                        : 'status-active';
+                    
+                    return `
+                    <div class="team-member-card bg-gray-50 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-semibold text-gray-800 text-sm">${member.full_name || 'Unknown User'}</h4>
+                                <p class="text-xs text-gray-600">${member.email}</p>
+                                <div class="flex items-center mt-1">
+                                    <span class="text-xs ${statusClass} font-medium mr-3">
+                                        ${member.status || 'Active'}
+                                    </span>
+                                    <span class="text-xs text-gray-500">
+                                        Joined: ${new Date(member.created_at).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-600">Balance</p>
+                                <p class="font-bold text-green-600 text-sm">${formatUGX(member.balance || 0)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+            } else {
+                noTeamMessage.style.display = 'block';
+            }
+        }
+
+        function updateProfileDisplay(profile) {
+            // Update personal info
+            document.getElementById('profileFullName').textContent = profile.full_name || 'Not set';
+            document.getElementById('profileEmail').textContent = profile.email;
+            document.getElementById('profilePhone').textContent = profile.phone || 'Not set';
+            document.getElementById('profileUsername').textContent = profile.username;
+            
+            // Update balance and status
+            document.getElementById('currentBalance').textContent = formatUGX(profile.balance || 0);
+            document.getElementById('headerBalance').textContent = formatUGX(profile.balance || 0);
+            document.getElementById('mobileBalance').textContent = formatUGX(profile.balance || 0);
+            updateTradingStatus(profile.status);
+            
+            // Update dates
+            if (profile.created_at) {
+                const joinDate = new Date(profile.created_at).toLocaleDateString();
+                document.getElementById('memberSince').textContent = joinDate;
+            }
+            
+            // Update referral info
+            document.getElementById('referralCode').textContent = profile.personal_referral_code || 'Not generated';
+            document.getElementById('referredBy').textContent = profile.referred_by ? profile.referred_by : 'No one';
+            
+            // Update referral link
+            const referralLink = `${window.location.origin}/register.html?ref=${profile.personal_referral_code}`;
+            document.getElementById('referralLink').value = referralLink;
+
+            // Update welcome messages
+            const welcomeName = profile.full_name || profile.username || 'Trader';
+            document.getElementById('userWelcome').textContent = `Welcome, ${welcomeName}`;
+            document.getElementById('mobileUserWelcome').textContent = `Welcome, ${welcomeName}`;
+        }
+
+        function copyReferralCode() {
+            const code = document.getElementById('referralCode').textContent;
+            if (code === 'Not generated') {
+                showNotification('No referral code available', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('Referral code copied to clipboard!', 'success');
+            });
+        }
+
+        function copyReferralLink() {
+            const link = document.getElementById('referralLink');
+            link.select();
+            navigator.clipboard.writeText(link.value).then(() => {
+                showNotification('Referral link copied to clipboard!', 'success');
+            });
+        }
+
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                showNotification('Error during logout', 'error');
+            }
+        }
+
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+
+        function goToDeposit() {
+            window.location.href = 'deposit.html';
+        }
+
+        function goToWithdraw() {
+            window.location.href = 'withdraw.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserProfile();
+            
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                const mobileMenu = document.getElementById('mobileMenu');
+                const mobileMenuButton = document.querySelector('[onclick="openMobileMenu()"]');
+                
+                if (mobileMenu.classList.contains('open') && 
+                    !mobileMenu.contains(e.target) && 
+                    !mobileMenuButton.contains(e.target)) {
+                    closeMobileMenu();
+                }
+            });
+
+            // Close mobile menu when clicking on backdrop
+            document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+
+            // Real-time balance updates
+            supabase
+                .channel('profile-changes')
+                .on('postgres_changes', 
+                    { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'profiles' 
+                    }, 
+                    (payload) => {
+                        if (userProfile && payload.new.id === userProfile.id) {
+                            userProfile = payload.new;
+                            updateProfileDisplay(payload.new);
+                        }
+                    }
+                )
+                .subscribe();
+        });
+    </script>
+</body>
+</html>

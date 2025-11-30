@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Funds - AiTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(30, 58, 138, 0.3);
+            border-radius: 50%;
+            border-top-color: #1e3a8a;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .file-upload-area {
+            border: 2px dashed #d1d5db;
+            transition: all 0.3s ease;
+        }
+        .file-upload-area.dragover {
+            border-color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .success-modal {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .balance-pulse {
+            animation: balancePulse 2s ease-in-out;
+        }
+        @keyframes balancePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+        }
+        .transaction-item:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-xl p-4 lg:p-6 max-w-md w-full success-modal border border-amber-200 shadow-xl">
+            <div class="text-center">
+                <!-- Success Icon -->
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+                
+                <!-- Title -->
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Deposit Submitted!</h3>
+                
+                <!-- Message -->
+                <div class="text-gray-700 mb-4 space-y-2 text-sm">
+                    <p class="font-semibold" id="modalAmount">Amount: UGX 0</p>
+                    <p class="font-semibold" id="modalReference">Reference: AT-USER123</p>
+                    <p class="text-xs text-gray-600 mt-2">Your deposit is pending admin verification. You will be notified once verified.</p>
+                </div>
+                
+                <!-- OK Button -->
+                <button onclick="closeSuccessModal()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200 transform hover:scale-105 text-sm">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">AiTrader</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-robot mr-3"></i>Trading Bots
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-wallet mr-3"></i>My Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 bg-blue-700 text-white rounded-lg">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold balance-pulse">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="hover:text-green-300 transition-colors">Trading Bots</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="hover:text-green-300 transition-colors">My Investments</a>
+                    <a href="transactions.html" class="hover:text-green-300 transition-colors">Transactions</a>
+                    <a href="deposit.html" class="text-green-400 font-semibold">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white balance-pulse" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="trading-bots.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-robot text-lg mb-1"></i>
+                <span class="text-xs">Bots</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading deposit page...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="depositContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">Deposit Funds</h1>
+            <p class="text-gray-600 text-sm lg:text-base">Add money to your trading account</p>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Deposit Form & Balance -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Available Balance -->
+                <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900">Available Balance</h3>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-wallet text-xl text-green-600"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl lg:text-2xl font-bold text-green-600 balance-pulse" id="currentBalance">UGX 0</div>
+                    <p class="text-gray-500 text-xs mt-1">Current available balance for trading</p>
+                </div>
+
+                <!-- Total Deposits -->
+                <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900">Total Deposits</h3>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-chart-line text-xl text-blue-600"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl lg:text-2xl font-bold text-blue-600" id="totalDeposits">UGX 0</div>
+                    <p class="text-gray-500 text-xs mt-1">Total confirmed deposits from transactions</p>
+                </div>
+
+                <!-- Deposit Form -->
+                <div class="bg-white rounded-xl p-4 lg:p-6 card-hover border border-gray-200 shadow-sm">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle text-blue-600 mr-2 text-sm"></i>
+                            <span class="text-blue-700 font-semibold text-sm">Deposits require admin verification (1-2 hours)</span>
+                        </div>
+                    </div>
+
+                    <h2 class="text-xl lg:text-2xl font-bold mb-4 text-gray-900">Make a Deposit</h2>
+                    
+                    <form id="depositForm">
+                        <div class="space-y-4">
+                            <!-- Amount Input -->
+                            <div>
+                                <label class="block text-gray-700 mb-2 font-medium text-sm">Amount (UGX)</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-3 text-gray-500 text-sm">UGX</span>
+                                    <input 
+                                        type="number" 
+                                        id="depositAmount"
+                                        min="10000"
+                                        step="1000"
+                                        required
+                                        class="w-full bg-gray-50 border border-gray-300 rounded-lg pl-16 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        placeholder="0"
+                                    >
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Minimum deposit: <span class="text-green-600 font-semibold">UGX 10,000</span></p>
+                            </div>
+
+                            <!-- Quick Amount Buttons -->
+                            <div>
+                                <label class="block text-gray-700 mb-2 font-medium text-sm">Quick Amounts</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="setAmount(10000)" class="bg-gray-100 hover:bg-gray-200 py-2 rounded transition-colors border border-gray-300 text-sm">10K</button>
+                                    <button type="button" onclick="setAmount(50000)" class="bg-gray-100 hover:bg-gray-200 py-2 rounded transition-colors border border-gray-300 text-sm">50K</button>
+                                    <button type="button" onclick="setAmount(100000)" class="bg-gray-100 hover:bg-gray-200 py-2 rounded transition-colors border border-gray-300 text-sm">100K</button>
+                                </div>
+                            </div>
+
+                            <!-- Payment Method -->
+                            <div>
+                                <label class="block text-gray-700 mb-3 font-medium text-sm">Payment Method</label>
+                                <div class="space-y-3">
+                                    <label class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
+                                        <input type="radio" name="method" value="mtn" class="text-blue-600" checked>
+                                        <div class="ml-3">
+                                            <div class="flex items-center space-x-2">
+                                                <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                                                    <span class="font-bold text-white text-xs">M</span>
+                                                </div>
+                                                <span class="font-semibold text-gray-900 text-sm">MTN Mobile Money</span>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
+                                        <input type="radio" name="method" value="airtel" class="text-blue-600">
+                                        <div class="ml-3">
+                                            <div class="flex items-center space-x-2">
+                                                <div class="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <span class="font-bold text-white text-xs">A</span>
+                                                </div>
+                                                <span class="font-semibold text-gray-900 text-sm">Airtel Money</span>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
+                                        <input type="radio" name="method" value="bank" class="text-blue-600">
+                                        <div class="ml-3">
+                                            <div class="flex items-center space-x-2">
+                                                <i class="fas fa-university text-blue-600 text-sm"></i>
+                                                <span class="font-semibold text-gray-900 text-sm">Bank Transfer</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Payment Details -->
+                            <div id="paymentDetails" class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                <h4 class="font-semibold mb-2 text-blue-800 text-sm" id="paymentMethodTitle">MTN Mobile Money Payment Details</h4>
+                                <div class="space-y-2 text-xs">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-700">Phone Number:</span>
+                                        <span class="font-mono font-semibold text-gray-900" id="paymentPhone">256 772 123 456</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-700">Account Name:</span>
+                                        <span class="font-semibold text-gray-900 text-sm">AiTrader LTD</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-700">Reference:</span>
+                                        <span class="font-mono text-blue-800 text-sm" id="paymentReference">AT-USER123</span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-blue-600 mt-2">Use your username as payment reference</p>
+                            </div>
+
+                            <!-- Payment Proof Upload -->
+                            <div>
+                                <label class="block text-gray-700 mb-2 font-medium text-sm">Payment Proof (Screenshot)</label>
+                                <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer bg-gray-50 border border-gray-300" id="fileUploadArea">
+                                    <input type="file" id="paymentProof" accept="image/*,.pdf,.doc,.docx" class="hidden">
+                                    <div class="py-6">
+                                        <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-3"></i>
+                                        <p class="text-gray-600 mb-2 text-sm">Drag & drop your payment screenshot here</p>
+                                        <p class="text-gray-500 text-xs">Supports: JPG, PNG, PDF, DOC (Max: 5MB)</p>
+                                        <button type="button" onclick="document.getElementById('paymentProof').click()" class="mt-3 bg-white hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors border border-gray-300 text-sm">
+                                            Browse Files
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="file-name text-center mt-2 text-gray-600 text-sm" id="fileName">No file selected</div>
+                                <div class="error-message text-red-600 text-xs mt-1 text-center hidden" id="fileError">Please upload a payment proof screenshot</div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button 
+                                type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center text-sm"
+                            >
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                Submit Deposit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pending Deposits & Info -->
+            <div class="space-y-6">
+                <!-- Pending Deposits -->
+                <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900">Pending Deposits</h3>
+                        <button onclick="refreshPendingDeposits()" class="p-1 text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fas fa-sync-alt text-sm"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-3" id="pendingDeposits">
+                        <div class="text-gray-500 text-center py-3 text-sm">No pending deposits</div>
+                    </div>
+                </div>
+
+                <!-- Deposit Instructions -->
+                <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-900">Deposit Instructions</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">1</div>
+                            <span class="text-gray-700">Send exact amount to the provided payment details</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">2</div>
+                            <span class="text-gray-700">Use your username as payment reference</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">3</div>
+                            <span class="text-gray-700">Take a screenshot of successful payment</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">4</div>
+                            <span class="text-gray-700">Upload payment proof and submit request</span>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <div class="bg-blue-100 text-blue-600 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs">5</div>
+                            <span class="text-gray-700">Wait for admin verification (1-2 hours)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Deposits -->
+                <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-900">Recent Deposits</h3>
+                    <div class="space-y-3" id="recentDeposits">
+                        <div class="text-gray-500 text-center py-3 text-sm">No recent deposits</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Success Modal Functions
+        function showSuccessModal(amount, reference) {
+            document.getElementById('modalAmount').textContent = `Amount: UGX ${amount.toLocaleString()}`;
+            document.getElementById('modalReference').textContent = `Reference: ${reference}`;
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('successModal').addEventListener('click', (e) => {
+            if (e.target.id === 'successModal') {
+                closeSuccessModal();
+            }
+        });
+
+        // Database Manager
+        const DatabaseManager = {
+            async ensureUserProfile(userId, userEmail) {
+                try {
+                    // Check if profile exists
+                    const { data: existingProfile, error: checkError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userId)
+                        .single();
+
+                    if (checkError && checkError.code !== 'PGRST116') {
+                        throw checkError;
+                    }
+
+                    if (existingProfile) {
+                        return existingProfile;
+                    }
+
+                    // Create new profile
+                    const newProfile = {
+                        id: userId,
+                        email: userEmail,
+                        username: `user_${userId.substring(0, 8)}`,
+                        full_name: userEmail.split('@')[0] || 'Trader',
+                        balance: 0,
+                        total_returns: 0,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        last_login: new Date().toISOString()
+                    };
+
+                    const { data: createdProfile, error: createError } = await supabase
+                        .from('profiles')
+                        .insert([newProfile])
+                        .select()
+                        .single();
+
+                    if (createError) throw createError;
+                    return createdProfile;
+
+                } catch (error) {
+                    console.error('Profile creation failed:', error);
+                    throw error;
+                }
+            },
+
+            async createTransaction(transactionData) {
+                try {
+                    // Ensure user profile exists
+                    await this.ensureUserProfile(transactionData.user_id, transactionData.user_email);
+                    
+                    // Create transaction
+                    const { data, error } = await supabase
+                        .from('transactions')
+                        .insert([transactionData])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    return data;
+
+                } catch (error) {
+                    console.error('Transaction creation failed:', error);
+                    throw error;
+                }
+            },
+
+            async getUserTransactions(userId, type = null, status = null, limit = 5) {
+                try {
+                    let query = supabase
+                        .from('transactions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false });
+
+                    if (type) query = query.eq('type', type);
+                    if (status) query = query.eq('status', status);
+                    if (limit) query = query.limit(limit);
+
+                    const { data, error } = await query;
+
+                    if (error) throw error;
+                    return data || [];
+
+                } catch (error) {
+                    console.error('Error fetching transactions:', error);
+                    return [];
+                }
+            },
+
+            async getUserProfile(userId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userId)
+                        .single();
+
+                    if (error) throw error;
+                    return data;
+
+                } catch (error) {
+                    console.error('Error fetching user profile:', error);
+                    return null;
+                }
+            },
+
+            async getTotalConfirmedDeposits(userId) {
+                try {
+                    const { data: deposits, error } = await supabase
+                        .from('transactions')
+                        .select('amount, status, created_at')
+                        .eq('user_id', userId)
+                        .eq('type', 'deposit')
+                        .eq('status', 'completed')
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    const totalAmount = deposits.reduce((sum, deposit) => sum + (parseFloat(deposit.amount) || 0), 0);
+                    
+                    return {
+                        totalAmount: totalAmount,
+                        deposits: deposits || []
+                    };
+
+                } catch (error) {
+                    console.error('Error fetching total deposits:', error);
+                    return {
+                        totalAmount: 0,
+                        deposits: []
+                    };
+                }
+            },
+
+            async getAllUserDeposits(userId, limit = 10) {
+                try {
+                    const { data: deposits, error } = await supabase
+                        .from('transactions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .eq('type', 'deposit')
+                        .order('created_at', { ascending: false })
+                        .limit(limit);
+
+                    if (error) throw error;
+                    return deposits || [];
+
+                } catch (error) {
+                    console.error('Error fetching all deposits:', error);
+                    return [];
+                }
+            }
+        };
+
+        // File Upload Manager
+        const FileUploadManager = {
+            async uploadFile(file, userId) {
+                try {
+                    const fileExt = file.name.split('.').pop() || 'jpg';
+                    const fileName = `deposit_${userId}_${Date.now()}.${fileExt}`;
+                    
+                    const { data, error } = await supabase.storage
+                        .from('payment-proofs')
+                        .upload(fileName, file);
+
+                    if (error) throw error;
+
+                    const { data: urlData } = supabase.storage
+                        .from('payment-proofs')
+                        .getPublicUrl(data.path);
+
+                    return {
+                        success: true,
+                        path: data.path,
+                        url: urlData.publicUrl
+                    };
+
+                } catch (error) {
+                    console.error('File upload failed:', error);
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            }
+        };
+
+        // Auth Manager
+        const AuthManager = {
+            currentUser: null,
+            userProfile: null,
+
+            async init() {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error || !session) {
+                        this.redirectToLogin();
+                        return;
+                    }
+
+                    this.currentUser = session.user;
+                    this.userProfile = await DatabaseManager.ensureUserProfile(
+                        session.user.id, 
+                        session.user.email
+                    );
+
+                    this.updateUI();
+                    return true;
+
+                } catch (error) {
+                    console.error('Auth initialization failed:', error);
+                    this.redirectToLogin();
+                    return false;
+                }
+            },
+
+            redirectToLogin() {
+                alert('Please login to continue');
+                window.location.href = 'login.html';
+            },
+
+            updateUI() {
+                const welcomeName = this.userProfile?.full_name || this.userProfile?.username || 'Trader';
+                document.getElementById('userWelcome').textContent = `Welcome, ${welcomeName}`;
+                document.getElementById('mobileUserWelcome').textContent = `Welcome, ${welcomeName}`;
+            },
+
+            async logout() {
+                try {
+                    await supabase.auth.signOut();
+                } catch (error) {
+                    console.error('Logout error:', error);
+                } finally {
+                    window.location.href = 'login.html';
+                }
+            }
+        };
+
+        // Real-time Balance Manager
+        const RealTimeBalanceManager = {
+            subscription: null,
+
+            async init() {
+                await this.subscribeToBalanceChanges();
+            },
+
+            async subscribeToBalanceChanges() {
+                try {
+                    // Subscribe to profile changes for the current user
+                    this.subscription = supabase
+                        .channel('balance-changes')
+                        .on(
+                            'postgres_changes',
+                            {
+                                event: 'UPDATE',
+                                schema: 'public',
+                                table: 'profiles',
+                                filter: `id=eq.${AuthManager.currentUser.id}`
+                            },
+                            (payload) => {
+                                console.log('Balance update received:', payload);
+                                this.handleBalanceUpdate(payload.new);
+                            }
+                        )
+                        .subscribe();
+
+                    console.log('✅ Subscribed to real-time balance updates');
+
+                } catch (error) {
+                    console.error('❌ Error subscribing to balance updates:', error);
+                }
+            },
+
+            handleBalanceUpdate(updatedProfile) {
+                // Update all balance displays
+                DepositManager.updateBalanceDisplay(updatedProfile.balance || 0);
+                
+                // Show notification if balance increased
+                this.showBalanceUpdateNotification(updatedProfile.balance);
+            },
+
+            showBalanceUpdateNotification(newBalance) {
+                const currentBalance = parseFloat(AuthManager.userProfile?.balance || 0);
+                const updatedBalance = parseFloat(newBalance || 0);
+                
+                if (updatedBalance > currentBalance) {
+                    const increase = updatedBalance - currentBalance;
+                    DepositManager.showNotification(`Balance updated! +UGX ${increase.toLocaleString()}`, 'success');
+                }
+                
+                // Update the user profile in memory
+                if (AuthManager.userProfile) {
+                    AuthManager.userProfile.balance = newBalance;
+                }
+            },
+
+            unsubscribe() {
+                if (this.subscription) {
+                    supabase.removeChannel(this.subscription);
+                }
+            }
+        };
+
+        // Deposit Manager
+        const DepositManager = {
+            async init() {
+                try {
+                    const authSuccess = await AuthManager.init();
+                    if (!authSuccess) return;
+
+                    this.showDepositPage();
+                    await this.loadUserBalance();
+                    await this.loadTotalDeposits();
+                    await this.loadPendingDeposits();
+                    await this.loadRecentDeposits();
+                    this.setupEventListeners();
+                    this.generatePaymentReference();
+                    
+                    // Initialize real-time balance updates
+                    await RealTimeBalanceManager.init();
+                    
+                } catch (error) {
+                    console.error('Deposit page initialization failed:', error);
+                    this.showNotification('Error loading deposit page', 'error');
+                }
+            },
+
+            showDepositPage() {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('depositContent').classList.remove('hidden');
+            },
+
+            async loadUserBalance() {
+                try {
+                    if (AuthManager.userProfile) {
+                        this.updateBalanceDisplay(AuthManager.userProfile.balance || 0);
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Balance load failed:', error);
+                    return false;
+                }
+            },
+
+            async loadTotalDeposits() {
+                try {
+                    const result = await DatabaseManager.getTotalConfirmedDeposits(AuthManager.currentUser.id);
+                    document.getElementById('totalDeposits').textContent = `UGX ${result.totalAmount.toLocaleString()}`;
+                    return true;
+                } catch (error) {
+                    console.error('Total deposits load failed:', error);
+                    return false;
+                }
+            },
+
+            updateBalanceDisplay(balance) {
+                const formattedBalance = `UGX ${parseFloat(balance).toLocaleString()}`;
+                
+                document.getElementById('currentBalance').textContent = formattedBalance;
+                document.getElementById('headerBalance').textContent = formattedBalance;
+                document.getElementById('mobileBalance').textContent = formattedBalance;
+                
+                // Add animation to balance elements
+                const balanceElements = document.querySelectorAll('.balance-pulse');
+                balanceElements.forEach(el => {
+                    el.classList.remove('balance-pulse');
+                    void el.offsetWidth; // Trigger reflow
+                    el.classList.add('balance-pulse');
+                });
+            },
+
+            setupEventListeners() {
+                const fileInput = document.getElementById('paymentProof');
+                const fileUploadArea = document.getElementById('fileUploadArea');
+                
+                fileInput.addEventListener('change', (e) => {
+                    this.handleFileSelect(e);
+                });
+
+                // Drag and drop handlers
+                ['dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    fileUploadArea.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
+
+                fileUploadArea.addEventListener('dragover', () => {
+                    fileUploadArea.classList.add('dragover');
+                });
+
+                fileUploadArea.addEventListener('dragleave', () => {
+                    fileUploadArea.classList.remove('dragover');
+                });
+
+                fileUploadArea.addEventListener('drop', (e) => {
+                    fileUploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                        this.handleFileSelect(e);
+                    }
+                });
+
+                // Payment method change
+                document.querySelectorAll('input[name="method"]').forEach(radio => {
+                    radio.addEventListener('change', () => {
+                        this.updatePaymentDetails();
+                    });
+                });
+            },
+
+            handleFileSelect(e) {
+                const fileName = document.getElementById('fileName');
+                const fileInput = document.getElementById('paymentProof');
+                
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    
+                    if (file.size > 5 * 1024 * 1024) {
+                        fileName.textContent = 'File too large (max 5MB)';
+                        fileName.className = 'file-name text-center mt-2 text-red-600 text-sm';
+                        fileInput.value = '';
+                        return;
+                    }
+                    
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+                    if (!allowedTypes.includes(file.type)) {
+                        fileName.textContent = 'Invalid file type. Use JPG, PNG, or PDF';
+                        fileName.className = 'file-name text-center mt-2 text-red-600 text-sm';
+                        fileInput.value = '';
+                        return;
+                    }
+                    
+                    fileName.textContent = `${file.name} (${this.formatFileSize(file.size)})`;
+                    fileName.className = 'file-name text-center mt-2 text-green-600 text-sm';
+                    document.getElementById('fileError').classList.add('hidden');
+                } else {
+                    fileName.textContent = 'No file selected';
+                    fileName.className = 'file-name text-center mt-2 text-gray-600 text-sm';
+                }
+            },
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            },
+
+            updatePaymentDetails() {
+                const method = document.querySelector('input[name="method"]:checked').value;
+                const methodTitle = document.getElementById('paymentMethodTitle');
+                const paymentPhone = document.getElementById('paymentPhone');
+
+                switch(method) {
+                    case 'mtn':
+                        methodTitle.textContent = 'MTN Mobile Money Payment Details';
+                        paymentPhone.textContent = '256 772 123 456';
+                        break;
+                    case 'airtel':
+                        methodTitle.textContent = 'Airtel Money Payment Details';
+                        paymentPhone.textContent = '256 752 123 456';
+                        break;
+                    case 'bank':
+                        methodTitle.textContent = 'Bank Transfer Details';
+                        paymentPhone.textContent = '0123456789';
+                        break;
+                }
+            },
+
+            generatePaymentReference() {
+                const reference = `AT-${AuthManager.userProfile.username.toUpperCase()}-${Date.now().toString().slice(-6)}`;
+                document.getElementById('paymentReference').textContent = reference;
+                return reference;
+            },
+
+            async loadPendingDeposits() {
+                try {
+                    const deposits = await DatabaseManager.getUserTransactions(
+                        AuthManager.currentUser.id, 
+                        'deposit', 
+                        'pending',
+                        5
+                    );
+                    this.displayPendingDeposits(deposits);
+                } catch (error) {
+                    console.error('Error loading pending deposits:', error);
+                    this.displayPendingDeposits([]);
+                }
+            },
+
+            displayPendingDeposits(deposits) {
+                const container = document.getElementById('pendingDeposits');
+                
+                if (deposits.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-gray-500 text-center py-3 text-sm">
+                            <i class="fas fa-clock text-xl mb-2"></i>
+                            <p>No pending deposits</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = deposits.map(deposit => `
+                    <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <div class="font-medium text-gray-900 text-sm">${deposit.description || 'Deposit'}</div>
+                                <div class="text-xs text-gray-600">${new Date(deposit.created_at).toLocaleDateString()}</div>
+                            </div>
+                            <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Pending</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">Amount:</span>
+                            <span class="text-green-600 font-semibold text-sm">UGX ${(deposit.amount).toLocaleString()}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">Reference: ${deposit.reference}</div>
+                        <div class="text-xs text-gray-500">Method: ${deposit.method?.toUpperCase() || 'N/A'}</div>
+                    </div>
+                `).join('');
+            },
+
+            async loadRecentDeposits() {
+                try {
+                    // Get all deposits (both confirmed and pending) for recent display
+                    const deposits = await DatabaseManager.getAllUserDeposits(AuthManager.currentUser.id, 5);
+                    this.displayRecentDeposits(deposits);
+                } catch (error) {
+                    console.error('Error loading recent deposits:', error);
+                    this.displayRecentDeposits([]);
+                }
+            },
+
+            displayRecentDeposits(deposits) {
+                const container = document.getElementById('recentDeposits');
+                
+                if (deposits.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-gray-500 text-center py-3 text-sm">
+                            <i class="fas fa-history text-xl mb-2"></i>
+                            <p>No recent deposits</p>
+                            <p class="text-xs mt-1">Your deposit history will appear here</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = deposits.map(deposit => {
+                    const statusClass = deposit.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                      deposit.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                      'bg-red-100 text-red-800';
+                    
+                    const statusText = deposit.status === 'completed' ? 'Confirmed' : 
+                                     deposit.status === 'pending' ? 'Pending' : 
+                                     'Failed';
+                    
+                    return `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 transaction-item">
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start mb-1">
+                                    <div class="font-medium text-gray-900 text-sm">${deposit.description || 'Deposit'}</div>
+                                    <span class="${statusClass} text-xs px-2 py-1 rounded-full">${statusText}</span>
+                                </div>
+                                <div class="text-xs text-gray-600">${new Date(deposit.created_at).toLocaleDateString()}</div>
+                                <div class="text-xs text-gray-500 mt-1">Ref: ${deposit.reference}</div>
+                            </div>
+                            <div class="text-green-600 font-semibold ml-3 text-right text-sm">
+                                UGX ${(deposit.amount).toLocaleString()}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async processDeposit(amount, method, file) {
+                try {
+                    const depositAmount = amount;
+
+                    if (depositAmount < 10000) {
+                        throw new Error('Minimum deposit amount is UGX 10,000');
+                    }
+
+                    if (!file) {
+                        throw new Error('Payment proof is required');
+                    }
+
+                    // Upload file
+                    const uploadResult = await FileUploadManager.uploadFile(file, AuthManager.currentUser.id);
+                    if (!uploadResult.success) {
+                        throw new Error(`File upload failed: ${uploadResult.error}`);
+                    }
+
+                    // Create transaction
+                    const reference = this.generatePaymentReference();
+                    const transactionData = {
+                        user_id: AuthManager.currentUser.id,
+                        user_email: AuthManager.currentUser.email,
+                        type: 'deposit',
+                        amount: depositAmount,
+                        description: `Deposit via ${method.toUpperCase()}`,
+                        method: method,
+                        status: 'pending',
+                        reference: reference,
+                        deposit_proof_url: uploadResult.url,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+
+                    const transactionResult = await DatabaseManager.createTransaction(transactionData);
+
+                    return {
+                        success: true,
+                        reference: reference,
+                        transactionId: transactionResult.id
+                    };
+
+                } catch (error) {
+                    console.error('Deposit processing error:', error);
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            },
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-600' : 
+                    type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                } text-white max-w-sm`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            }
+        };
+
+        // Global Functions
+        async function refreshPendingDeposits() {
+            await DepositManager.loadPendingDeposits();
+            await DepositManager.loadRecentDeposits();
+            await DepositManager.loadTotalDeposits();
+            DepositManager.showNotification('Deposits updated', 'success');
+        }
+
+        function setAmount(amount) {
+            document.getElementById('depositAmount').value = amount;
+        }
+
+        function logout() {
+            RealTimeBalanceManager.unsubscribe();
+            AuthManager.logout();
+        }
+
+        // Form Handler
+        document.getElementById('depositForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('depositAmount').value);
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const fileInput = document.getElementById('paymentProof');
+            const file = fileInput.files[0];
+            
+            if (amount < 10000) {
+                DepositManager.showNotification('Minimum deposit amount is UGX 10,000', 'error');
+                return;
+            }
+
+            if (!file) {
+                document.getElementById('fileError').classList.remove('hidden');
+                DepositManager.showNotification('Please upload payment proof screenshot', 'error');
+                return;
+            }
+
+            const button = e.target.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<div class="loading mr-2"></div> Processing...';
+
+            try {
+                const result = await DepositManager.processDeposit(amount, method, file);
+                
+                if (result.success) {
+                    DepositManager.showNotification(`Deposit request of UGX ${amount.toLocaleString()} submitted for verification!`, 'success');
+                    
+                    // Refresh all deposit sections
+                    await DepositManager.loadPendingDeposits();
+                    await DepositManager.loadRecentDeposits();
+                    await DepositManager.loadTotalDeposits();
+                    
+                    document.getElementById('depositForm').reset();
+                    document.getElementById('fileName').textContent = 'No file selected';
+                    document.getElementById('fileName').className = 'file-name text-center mt-2 text-gray-600 text-sm';
+                    DepositManager.generatePaymentReference();
+                    
+                    // Show the beautiful modal instead of alert
+                    setTimeout(() => {
+                        showSuccessModal(amount, result.reference);
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Deposit failed');
+                }
+            } catch (error) {
+                console.error('Deposit error:', error);
+                DepositManager.showNotification(error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        });
+
+        // Close mobile menu when clicking on backdrop
+        document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await DepositManager.init();
+            } catch (error) {
+                console.error('Error initializing deposit page:', error);
+            }
+        });
+    </script>
+</body>
+</html>

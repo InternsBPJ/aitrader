@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions - CryptoTradePro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .status-pending { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .status-completed { background-color: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status-failed { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-processing { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .status-cancelled { background-color: rgba(107, 114, 128, 0.2); color: #6b7280; }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+        }
+        .transaction-item:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">CryptoTradePro</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-robot mr-3"></i>Trading Bots
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-wallet mr-3"></i>My Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 bg-blue-700 text-white rounded-lg">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">CryptoTradePro</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="hover:text-green-300 transition-colors">Trading Bots</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="hover:text-green-300 transition-colors">My Investments</a>
+                    <a href="transactions.html" class="text-green-400 font-semibold">Transactions</a>
+                    <a href="deposit.html" class="hover:text-green-300 transition-colors">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="transactions.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-exchange-alt text-lg mb-1"></i>
+                <span class="text-xs">Transactions</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading transactions...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">Transaction History</h1>
+            <p class="text-gray-600 text-sm lg:text-base">View all your deposits, withdrawals, and trading activities</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Total Deposits</p>
+                        <p class="text-lg lg:text-2xl font-bold text-green-600" id="totalDeposits">UGX 0</p>
+                    </div>
+                    <div class="bg-green-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-arrow-down text-green-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">All verified deposits</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Total Withdrawals</p>
+                        <p class="text-lg lg:text-2xl font-bold text-red-600" id="totalWithdrawals">UGX 0</p>
+                    </div>
+                    <div class="bg-red-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-arrow-up text-red-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">Including fees</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Total Returns</p>
+                        <p class="text-lg lg:text-2xl font-bold text-blue-600" id="totalReturns">UGX 0</p>
+                    </div>
+                    <div class="bg-blue-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-chart-line text-blue-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">From trading</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Current Balance</p>
+                        <p class="text-lg lg:text-2xl font-bold text-purple-600" id="currentBalance">UGX 0</p>
+                    </div>
+                    <div class="bg-purple-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-wallet text-purple-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">Available balance</p>
+            </div>
+        </div>
+
+        <!-- Filters and Controls -->
+        <div class="bg-white rounded-xl p-4 mb-4 border border-gray-200 shadow-sm">
+            <div class="flex flex-col space-y-4">
+                <div>
+                    <h2 class="text-lg lg:text-xl font-semibold mb-2 navy-blue-text">All Transactions</h2>
+                    <p class="text-gray-600 text-sm">Filter and manage your transaction history</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Transaction Type Filter -->
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="block text-gray-600 text-sm mb-1">Type</label>
+                        <select id="typeFilter" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Types</option>
+                            <option value="deposit">Deposits</option>
+                            <option value="withdrawal">Withdrawals</option>
+                            <option value="investment">Investments</option>
+                            <option value="earning">Earnings</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="block text-gray-600 text-sm mb-1">Status</label>
+                        <select id="statusFilter" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">All Status</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-3">
+                    <button onclick="refreshTransactions()" class="flex-1 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg transition-colors text-sm border border-gray-300 flex items-center justify-center">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    
+                    <button onclick="exportTransactions()" class="flex-1 bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg transition-colors text-sm text-white flex items-center justify-center">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions List -->
+        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm mb-20 lg:mb-0">
+            <div id="transactionsList">
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-circle-notch fa-spin text-2xl mb-4"></i>
+                    <div>Loading transactions...</div>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t border-gray-200 space-y-4 sm:space-y-0">
+                <div class="text-gray-600 text-sm">
+                    Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> transactions
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prevPage" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextPage" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed border border-gray-300">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Transaction Details Modal -->
+    <div id="transactionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-xl p-4 md:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h3 class="text-xl md:text-2xl font-bold navy-blue-text">Transaction Details</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modalContent">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        let supabase;
+        
+        function initializeSupabase() {
+            const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+            
+            if (window.supabase && window.supabase.createClient) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } else {
+                console.error('Supabase JS library not loaded properly');
+                return false;
+            }
+            return true;
+        }
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Transactions Manager
+        const TransactionsManager = {
+            currentUser: null,
+            currentPage: 1,
+            itemsPerPage: 10,
+            allTransactions: [],
+            filters: {
+                type: 'all',
+                status: 'all',
+                date: 'all'
+            },
+
+            async init() {
+                if (!initializeSupabase()) {
+                    this.showError('Failed to initialize database connection.');
+                    return;
+                }
+
+                this.currentUser = await this.getCurrentUser();
+                if (!this.currentUser) return;
+
+                this.updateUserInterface();
+                this.setupEventListeners();
+                await this.loadTransactions();
+            },
+
+            async getCurrentUser() {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error || !session) {
+                        this.redirectToLogin();
+                        return null;
+                    }
+
+                    const { data: userProfile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching user profile:', profileError);
+                        return {
+                            id: session.user.id,
+                            email: session.user.email,
+                            fullName: session.user.email,
+                            balance: 0
+                        };
+                    }
+
+                    return {
+                        id: session.user.id,
+                        email: session.user.email,
+                        fullName: userProfile.full_name || session.user.email,
+                        balance: userProfile.balance || 0
+                    };
+
+                } catch (error) {
+                    console.error('Error getting user data:', error);
+                    this.redirectToLogin();
+                    return null;
+                }
+            },
+
+            redirectToLogin() {
+                alert('Please login to continue');
+                window.location.href = 'login.html';
+            },
+
+            updateUserInterface() {
+                const welcomeElement = document.getElementById('userWelcome');
+                const mobileWelcomeElement = document.getElementById('mobileUserWelcome');
+                if (welcomeElement) {
+                    welcomeElement.textContent = `Welcome, ${this.currentUser.fullName}`;
+                }
+                if (mobileWelcomeElement) {
+                    mobileWelcomeElement.textContent = `Welcome, ${this.currentUser.fullName}`;
+                }
+            },
+
+            setupEventListeners() {
+                const typeFilter = document.getElementById('typeFilter');
+                const statusFilter = document.getElementById('statusFilter');
+                const prevPage = document.getElementById('prevPage');
+                const nextPage = document.getElementById('nextPage');
+
+                if (typeFilter) {
+                    typeFilter.addEventListener('change', (e) => {
+                        this.filters.type = e.target.value;
+                        this.currentPage = 1;
+                        this.loadTransactions();
+                    });
+                }
+
+                if (statusFilter) {
+                    statusFilter.addEventListener('change', (e) => {
+                        this.filters.status = e.target.value;
+                        this.currentPage = 1;
+                        this.loadTransactions();
+                    });
+                }
+
+                if (prevPage) {
+                    prevPage.addEventListener('click', () => {
+                        if (this.currentPage > 1) {
+                            this.currentPage--;
+                            this.displayTransactions(this.allTransactions);
+                        }
+                    });
+                }
+
+                if (nextPage) {
+                    nextPage.addEventListener('click', () => {
+                        this.currentPage++;
+                        this.displayTransactions(this.allTransactions);
+                    });
+                }
+            },
+
+            async loadTransactions() {
+                try {
+                    if (!supabase) {
+                        throw new Error('Database not initialized');
+                    }
+
+                    // Show loading state
+                    const container = document.getElementById('transactionsList');
+                    if (container) {
+                        container.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-circle-notch fa-spin text-2xl mb-4"></i>
+                                <div>Loading transactions...</div>
+                            </div>
+                        `;
+                    }
+
+                    // Fetch transactions from Supabase
+                    let query = supabase
+                        .from('transactions')
+                        .select('*')
+                        .eq('user_id', this.currentUser.id)
+                        .order('created_at', { ascending: false });
+
+                    const { data: transactions, error } = await query;
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    console.log('Fetched transactions:', transactions);
+
+                    // Transform Supabase data
+                    this.allTransactions = transactions.map(tx => ({
+                        id: tx.id,
+                        type: tx.type,
+                        amount: parseFloat(tx.amount),
+                        description: tx.description,
+                        status: tx.status,
+                        reference: tx.reference,
+                        method: tx.method,
+                        proofUrl: tx.proof_url,
+                        proofData: tx.proof_data,
+                        timestamp: tx.created_at
+                    }));
+
+                    // Apply filters and display
+                    const filteredTransactions = this.applyFilters(this.allTransactions);
+                    this.displayTransactions(filteredTransactions);
+                    this.calculateStats(filteredTransactions);
+                    this.updatePagination(filteredTransactions);
+                    this.updateBalanceDisplay();
+
+                } catch (error) {
+                    console.error('Error loading transactions:', error);
+                    this.showError('Failed to load transactions. Please try again.');
+                }
+            },
+
+            applyFilters(transactions) {
+                let filtered = [...transactions];
+
+                // Type filter
+                if (this.filters.type !== 'all') {
+                    filtered = filtered.filter(tx => tx.type === this.filters.type);
+                }
+
+                // Status filter
+                if (this.filters.status !== 'all') {
+                    filtered = filtered.filter(tx => tx.status === this.filters.status);
+                }
+
+                return filtered;
+            },
+
+            displayTransactions(transactions) {
+                const container = document.getElementById('transactionsList');
+                if (!container) return;
+                
+                if (transactions.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fas fa-receipt text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="text-lg font-semibold mb-2 text-gray-600">No Transactions Found</h3>
+                            <p class="text-gray-500 mb-6 text-sm">No transactions match your current filters.</p>
+                            <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                                <button onclick="resetFilters()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white text-sm">Reset Filters</button>
+                                <a href="deposit.html" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-white text-sm text-center">Make Deposit</a>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Paginate transactions
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const paginatedTransactions = transactions.slice(startIndex, startIndex + this.itemsPerPage);
+
+                container.innerHTML = paginatedTransactions.map(tx => {
+                    const date = new Date(tx.timestamp);
+                    const amount = tx.amount;
+                    const isPositive = ['deposit', 'earning'].includes(tx.type);
+                    const amountClass = isPositive ? 'text-green-600' : 'text-red-600';
+                    const sign = isPositive ? '+' : '-';
+                    const typeClass = this.getTransactionTypeClass(tx.type);
+                    const statusClass = `status-${tx.status}`;
+
+                    return `
+                        <div class="transaction-item flex items-center justify-between p-3 border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer rounded-lg" 
+                             onclick="TransactionsManager.showTransactionDetails('${tx.id}')">
+                            <div class="flex items-center space-x-3 flex-1 min-w-0">
+                                <div class="${typeClass} p-2 rounded-lg flex-shrink-0">
+                                    <i class="fas fa-${this.getTransactionIcon(tx.type)} text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-gray-900 text-sm truncate">${tx.description || this.getDefaultDescription(tx.type)}</div>
+                                    <div class="text-xs text-gray-500 flex flex-wrap items-center gap-1 mt-1">
+                                        <span class="whitespace-nowrap">${date.toLocaleDateString()}</span>
+                                        ${tx.reference ? `<span class="bg-gray-100 px-1 py-0.5 rounded text-xs truncate max-w-[80px]">Ref: ${tx.reference}</span>` : ''}
+                                    </div>
+                                    ${tx.method ? `<div class="text-xs text-gray-500 mt-1">${tx.method}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="text-right ml-2 flex-shrink-0">
+                                <div class="font-semibold ${amountClass} text-sm lg:text-base">
+                                    ${sign}UGX ${Math.abs(amount).toLocaleString()}
+                                </div>
+                                <div class="flex items-center justify-end space-x-1 mt-1">
+                                    <span class="text-gray-500 text-xs capitalize hidden xs:inline-block">${tx.type}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${statusClass}">${tx.status}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            getTransactionIcon(type) {
+                const icons = {
+                    'deposit': 'arrow-down',
+                    'withdrawal': 'arrow-up',
+                    'investment': 'robot',
+                    'earning': 'coins'
+                };
+                return icons[type] || 'exchange-alt';
+            },
+
+            getTransactionTypeClass(type) {
+                const classes = {
+                    'deposit': 'bg-green-100 text-green-600',
+                    'withdrawal': 'bg-red-100 text-red-600',
+                    'investment': 'bg-purple-100 text-purple-600',
+                    'earning': 'bg-yellow-100 text-yellow-600'
+                };
+                return classes[type] || 'bg-gray-100 text-gray-600';
+            },
+
+            getDefaultDescription(type) {
+                const descriptions = {
+                    'deposit': 'Funds Deposit',
+                    'withdrawal': 'Funds Withdrawal',
+                    'investment': 'Trading Investment',
+                    'earning': 'Trading Earnings'
+                };
+                return descriptions[type] || 'Transaction';
+            },
+
+            calculateStats(transactions) {
+                let totalDeposits = 0;
+                let totalWithdrawals = 0;
+                let totalEarnings = 0;
+                let totalInvestments = 0;
+
+                transactions.forEach(tx => {
+                    const amount = parseFloat(tx.amount);
+
+                    switch(tx.type) {
+                        case 'deposit':
+                            if (tx.status === 'completed') {
+                                totalDeposits += amount;
+                            }
+                            break;
+                        case 'withdrawal':
+                            if (tx.status === 'completed') {
+                                totalWithdrawals += amount;
+                            }
+                            break;
+                        case 'earning':
+                            if (tx.status === 'completed') {
+                                totalEarnings += amount;
+                            }
+                            break;
+                        case 'investment':
+                            if (tx.status === 'completed') {
+                                totalInvestments += amount;
+                            }
+                            break;
+                    }
+                });
+
+                // Update DOM elements
+                const totalDepositsEl = document.getElementById('totalDeposits');
+                const totalWithdrawalsEl = document.getElementById('totalWithdrawals');
+                const totalReturnsEl = document.getElementById('totalReturns');
+                const headerBalanceEl = document.getElementById('headerBalance');
+                const mobileBalanceEl = document.getElementById('mobileBalance');
+
+                if (totalDepositsEl) totalDepositsEl.textContent = `UGX ${totalDeposits.toLocaleString()}`;
+                if (totalWithdrawalsEl) totalWithdrawalsEl.textContent = `UGX ${totalWithdrawals.toLocaleString()}`;
+                if (totalReturnsEl) totalReturnsEl.textContent = `UGX ${totalEarnings.toLocaleString()}`;
+                
+                // Update balance displays
+                const currentBalance = totalDeposits - totalWithdrawals;
+                if (headerBalanceEl) headerBalanceEl.textContent = `UGX ${currentBalance.toLocaleString()}`;
+                if (mobileBalanceEl) mobileBalanceEl.textContent = `UGX ${currentBalance.toLocaleString()}`;
+            },
+
+            updateBalanceDisplay() {
+                const balanceElement = document.getElementById('currentBalance');
+                if (balanceElement && this.currentUser) {
+                    balanceElement.textContent = `UGX ${this.currentUser.balance.toLocaleString()}`;
+                }
+            },
+
+            updatePagination(transactions) {
+                const showingCount = document.getElementById('showingCount');
+                const totalCount = document.getElementById('totalCount');
+                const prevPage = document.getElementById('prevPage');
+                const nextPage = document.getElementById('nextPage');
+
+                if (!showingCount || !totalCount || !prevPage || !nextPage) return;
+
+                const totalPages = Math.ceil(transactions.length / this.itemsPerPage);
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage + 1;
+                const endIndex = Math.min(startIndex + this.itemsPerPage - 1, transactions.length);
+
+                showingCount.textContent = `${startIndex}-${endIndex}`;
+                totalCount.textContent = transactions.length;
+
+                prevPage.disabled = this.currentPage === 1;
+                nextPage.disabled = this.currentPage >= totalPages || transactions.length === 0;
+            },
+
+            async showTransactionDetails(transactionId) {
+                try {
+                    if (!supabase) {
+                        throw new Error('Database not initialized');
+                    }
+
+                    const { data: transaction, error } = await supabase
+                        .from('transactions')
+                        .select('*')
+                        .eq('id', transactionId)
+                        .single();
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    const modal = document.getElementById('transactionModal');
+                    const modalContent = document.getElementById('modalContent');
+
+                    if (!modal || !modalContent) return;
+
+                    const date = new Date(transaction.created_at);
+                    const amount = parseFloat(transaction.amount);
+                    const isPositive = ['deposit', 'earning'].includes(transaction.type);
+                    const amountClass = isPositive ? 'text-green-600' : 'text-red-600';
+                    const sign = isPositive ? '+' : '-';
+
+                    modalContent.innerHTML = `
+                        <div class="space-y-4">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="${this.getTransactionTypeClass(transaction.type)} p-2 rounded-lg">
+                                        <i class="fas fa-${this.getTransactionIcon(transaction.type)}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold">${transaction.description || this.getDefaultDescription(transaction.type)}</div>
+                                        <div class="text-gray-500 text-sm">${date.toLocaleDateString()} at ${date.toLocaleTimeString()}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-xl ${amountClass}">${sign}UGX ${Math.abs(amount).toLocaleString()}</div>
+                                    <div class="text-gray-500 text-sm capitalize">${transaction.type}</div>
+                                </div>
+                            </div>
+
+                            <!-- Status and ID -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <div class="text-gray-600 text-sm">Status</div>
+                                    <div class="font-semibold capitalize flex items-center space-x-2 mt-1">
+                                        <span class="status-${transaction.status} px-2 py-1 rounded-full text-xs">${transaction.status}</span>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <div class="text-gray-600 text-sm">Transaction ID</div>
+                                    <div class="font-mono text-xs mt-1 break-all">${transaction.id}</div>
+                                </div>
+                            </div>
+
+                            <!-- Details -->
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <h4 class="font-semibold mb-2 navy-blue-text">Transaction Details</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Reference:</span>
+                                        <span class="font-semibold">${transaction.reference}</span>
+                                    </div>
+                                    
+                                    ${transaction.method ? `
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Payment Method:</span>
+                                            <span class="font-semibold capitalize">${transaction.method}</span>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Transaction Type:</span>
+                                        <span class="font-semibold capitalize">${transaction.type}</span>
+                                    </div>
+                                    
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Amount:</span>
+                                        <span class="font-semibold ${amountClass}">${sign}UGX ${Math.abs(amount).toLocaleString()}</span>
+                                    </div>
+                                    
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Created:</span>
+                                        <span class="font-semibold">${date.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${transaction.proof_url ? `
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <h4 class="font-semibold mb-2 navy-blue-text">Proof Document</h4>
+                                    <a href="${transaction.proof_url}" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-sm">
+                                        <i class="fas fa-external-link-alt mr-2"></i>View Proof Document
+                                    </a>
+                                </div>
+                            ` : ''}
+
+                            ${transaction.proof_data ? `
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <h4 class="font-semibold mb-2 navy-blue-text">Additional Proof Data</h4>
+                                    <div class="bg-white p-2 rounded border">
+                                        <pre class="text-xs text-gray-700 whitespace-pre-wrap break-words">${transaction.proof_data}</pre>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    modal.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Error loading transaction details:', error);
+                    this.showError('Failed to load transaction details.');
+                }
+            },
+
+            showError(message) {
+                const container = document.getElementById('transactionsList');
+                if (!container) return;
+                
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-lg font-semibold mb-2 text-red-600">Error</h3>
+                        <p class="text-gray-600 mb-4 text-sm">${message}</p>
+                        <button onclick="TransactionsManager.loadTransactions()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white text-sm">
+                            <i class="fas fa-redo mr-2"></i>Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        };
+
+        // Utility Functions
+        async function logout() {
+            if (supabase) {
+                const { error } = await supabase.auth.signOut();
+            }
+            sessionStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        async function refreshTransactions() {
+            await TransactionsManager.loadTransactions();
+            
+            // Show refresh feedback
+            const button = event.target;
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check mr-2"></i>Refreshed';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }, 2000);
+        }
+
+        function resetFilters() {
+            const typeFilter = document.getElementById('typeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+
+            if (typeFilter) typeFilter.value = 'all';
+            if (statusFilter) statusFilter.value = 'all';
+            
+            TransactionsManager.filters.type = 'all';
+            TransactionsManager.filters.status = 'all';
+            TransactionsManager.currentPage = 1;
+            TransactionsManager.loadTransactions();
+        }
+
+        function exportTransactions() {
+            alert('Export feature would download a CSV file with all your transactions');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('transactionModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await TransactionsManager.init();
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                console.log('Transactions page initialized successfully');
+            } catch (error) {
+                console.error('Error initializing transactions page:', error);
+                alert('Error loading transactions. Please refresh the page.');
+            }
+        });
+
+        // Close mobile menu when clicking on backdrop
+        document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+
+        // Close modal when clicking outside
+        document.getElementById('transactionModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'transactionModal') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

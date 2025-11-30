@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AiTrader | Best Trading Platform in Africa</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+        
+        .nav-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+        
+        .form-container {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 16px;
+            transform: translateY(-5px);
+        }
+        
+        .input-field {
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .input-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
+        }
+        
+        .security-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        @media (max-width: 640px) {
+            .form-container {
+                margin: 1rem;
+                border-radius: 16px;
+            }
+            
+            .form-card {
+                padding: 1.5rem !important;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-hidden {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav-gradient shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white p-2 rounded-lg">
+                        <i class="fas fa-robot text-xl text-blue-600"></i>
+                    </div>
+                    <span class="text-white font-bold text-xl">AiTrader</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="register.html" class="text-blue-200 hover:text-white px-3 py-2 rounded-md transition-colors duration-200">
+                        <i class="fas fa-user-plus mr-1"></i> Sign Up
+                    </a>
+                    <div class="mobile-hidden">
+                        <span class="text-blue-200 text-sm">Secure Trading Platform</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full form-container">
+            <div class="form-card p-8">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <div class="flex items-center justify-center space-x-3 mb-4">
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-robot text-2xl text-blue-600"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold text-gray-800">AiTrader</h1>
+                    </div>
+                    <p class="text-gray-600">Sign in to your trading account</p>
+                    
+                    <!-- Security Badge -->
+                    <div class="security-badge text-white text-sm py-2 px-4 rounded-full inline-flex items-center mt-2">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        <span>256-bit SSL Encrypted</span>
+                    </div>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" novalidate>
+                    <div class="space-y-6">
+                        <!-- Email Input -->
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                                Email Address
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-envelope text-gray-400"></i>
+                                </div>
+                                <input 
+                                    type="email" 
+                                    id="email" 
+                                    name="email"
+                                    required
+                                    autocomplete="email"
+                                    class="input-field text-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 block w-full pl-10 p-3 transition-colors duration-200"
+                                    placeholder="Enter your email"
+                                >
+                            </div>
+                            <div id="emailError" class="text-red-500 text-xs mt-1 hidden"></div>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-lock text-gray-400"></i>
+                                </div>
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password"
+                                    required
+                                    minlength="6"
+                                    autocomplete="current-password"
+                                    class="input-field text-gray-800 rounded-lg focus:ring-2 focus:ring-blue-500 block w-full pl-10 pr-10 p-3 transition-colors duration-200"
+                                    placeholder="Enter your password"
+                                >
+                                <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center" onclick="togglePasswordVisibility()">
+                                    <i class="fas fa-eye text-gray-400 hover:text-gray-600 transition-colors duration-200"></i>
+                                </button>
+                            </div>
+                            <div id="passwordError" class="text-red-500 text-xs mt-1 hidden"></div>
+                        </div>
+
+                        <!-- Remember Me & Forgot Password -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <input 
+                                    id="remember" 
+                                    name="remember" 
+                                    type="checkbox" 
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                >
+                                <label for="remember" class="ml-2 block text-sm text-gray-700">
+                                    Remember me
+                                </label>
+                            </div>
+                            <a href="forgot-password.html" class="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200 font-medium">
+                                Forgot password?
+                            </a>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button 
+                            type="submit"
+                            id="submitButton"
+                            class="w-full btn-primary text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center"
+                        >
+                            <i class="fas fa-sign-in-alt mr-2"></i>
+                            Sign In
+                        </button>
+
+                        <!-- Demo Credentials -->
+                        <div class="bg-blue-50 rounded-lg p-4 mt-4 border border-blue-200">
+                            <p class="text-sm text-blue-800 text-center">
+                                <strong>Demo Account:</strong><br>
+                                Email: demo@aitrader.com | Password: Demo123!
+                            </p>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Sign Up Link -->
+                <div class="text-center mt-6">
+                    <p class="text-gray-600">
+                        Don't have an account? 
+                        <a href="register.html" class="text-blue-600 hover:text-blue-500 font-semibold transition-colors duration-200">
+                            Create account
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Security Features -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="text-xs text-gray-500">
+                            <i class="fas fa-lock mb-1 block"></i>
+                            Secure Login
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <i class="fas fa-shield-alt mb-1 block"></i>
+                            Protected
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed top-20 right-4 z-50 max-w-sm w-full"></div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Security Manager
+        const SecurityManager = {
+            failedAttempts: 0,
+            maxAttempts: 5,
+            lockoutTime: 15 * 60 * 1000, // 15 minutes
+
+            checkLockout() {
+                const lockoutUntil = localStorage.getItem('loginLockout');
+                if (lockoutUntil && Date.now() < parseInt(lockoutUntil)) {
+                    const remainingTime = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 1000 / 60);
+                    throw new Error(`Too many failed attempts. Try again in ${remainingTime} minutes.`);
+                }
+            },
+
+            recordFailedAttempt() {
+                this.failedAttempts++;
+                if (this.failedAttempts >= this.maxAttempts) {
+                    const lockoutUntil = Date.now() + this.lockoutTime;
+                    localStorage.setItem('loginLockout', lockoutUntil.toString());
+                    localStorage.setItem('failedAttempts', '0');
+                    this.failedAttempts = 0;
+                } else {
+                    localStorage.setItem('failedAttempts', this.failedAttempts.toString());
+                }
+            },
+
+            resetFailedAttempts() {
+                this.failedAttempts = 0;
+                localStorage.removeItem('failedAttempts');
+                localStorage.removeItem('loginLockout');
+            },
+
+            loadFailedAttempts() {
+                const stored = localStorage.getItem('failedAttempts');
+                this.failedAttempts = stored ? parseInt(stored) : 0;
+            }
+        };
+
+        // Session Manager
+        const SessionManager = {
+            isProcessing: false,
+
+            async checkExistingSession() {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error) {
+                        console.error('Session check error:', error);
+                        return;
+                    }
+
+                    if (session && session.user) {
+                        console.log('Active session found, redirecting to dashboard...');
+                        await this.handleSuccessfulAuth(session);
+                    } else {
+                        this.loadRememberedEmail();
+                    }
+                } catch (error) {
+                    console.error('Session check failed:', error);
+                }
+            },
+
+            async handleSuccessfulAuth(session) {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+
+                try {
+                    // Reset security counters
+                    SecurityManager.resetFailedAttempts();
+
+                    // Get user profile
+                    const userProfile = await this.getUserProfile(session.user.id);
+                    
+                    // Update last login
+                    await this.updateLastLogin(session.user.id);
+
+                    // Store complete user data
+                    const userData = {
+                        user: session.user,
+                        profile: userProfile,
+                        session: session,
+                        timestamp: Date.now(),
+                        ip: await this.getClientIP()
+                    };
+
+                    // Store in session storage for dashboard access
+                    sessionStorage.setItem('currentUser', JSON.stringify(userData));
+                    sessionStorage.setItem('authToken', session.access_token);
+                    sessionStorage.setItem('lastLogin', Date.now().toString());
+
+                    console.log('Authentication successful, redirecting...');
+                    this.showNotification('Login successful! Redirecting...', 'success');
+
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Auth handling error:', error);
+                    this.isProcessing = false;
+                    this.showNotification('Error processing login. Please try again.', 'error');
+                }
+            },
+
+            async getUserProfile(userId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userId)
+                        .single();
+
+                    if (error) {
+                        console.warn('Profile fetch error:', error);
+                        return null;
+                    }
+
+                    return data;
+                } catch (error) {
+                    console.error('Profile fetch error:', error);
+                    return null;
+                }
+            },
+
+            async updateLastLogin(userId) {
+                try {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ 
+                            last_login: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', userId);
+
+                    if (error) {
+                        console.warn('Last login update failed:', error);
+                    }
+                } catch (error) {
+                    console.warn('Last login update error:', error);
+                }
+            },
+
+            async getClientIP() {
+                try {
+                    const response = await fetch('https://api.ipify.org?format=json');
+                    const data = await response.json();
+                    return data.ip;
+                } catch (error) {
+                    return 'unknown';
+                }
+            },
+
+            loadRememberedEmail() {
+                const rememberedEmail = localStorage.getItem('rememberedEmail');
+                if (rememberedEmail) {
+                    document.getElementById('email').value = rememberedEmail;
+                    document.getElementById('remember').checked = true;
+                }
+            },
+
+            showNotification(message, type = 'info') {
+                const container = document.getElementById('notificationContainer');
+                const notification = document.createElement('div');
+                notification.className = `p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-500' : 
+                    type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                } text-white mb-2`;
+                notification.textContent = message;
+                container.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 4000);
+            }
+        };
+
+        // Form Management
+        const FormManager = {
+            elements: {
+                form: document.getElementById('loginForm'),
+                email: document.getElementById('email'),
+                password: document.getElementById('password'),
+                submitButton: document.getElementById('submitButton'),
+                emailError: document.getElementById('emailError'),
+                passwordError: document.getElementById('passwordError')
+            },
+
+            init() {
+                this.setupEventListeners();
+                SecurityManager.loadFailedAttempts();
+            },
+
+            setupEventListeners() {
+                this.elements.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                
+                this.elements.email.addEventListener('blur', () => this.validateEmail());
+                this.elements.password.addEventListener('blur', () => this.validatePassword());
+                
+                this.elements.email.addEventListener('input', () => this.clearError(this.elements.email));
+                this.elements.password.addEventListener('input', () => this.clearError(this.elements.password));
+            },
+
+            validateEmail() {
+                const email = this.elements.email.value.trim();
+                if (!email) {
+                    this.showError(this.elements.email, 'Email is required');
+                    return false;
+                }
+                if (!this.isValidEmail(email)) {
+                    this.showError(this.elements.email, 'Please enter a valid email address');
+                    return false;
+                }
+                this.clearError(this.elements.email);
+                return true;
+            },
+
+            validatePassword() {
+                const password = this.elements.password.value;
+                if (!password) {
+                    this.showError(this.elements.password, 'Password is required');
+                    return false;
+                }
+                if (password.length < 6) {
+                    this.showError(this.elements.password, 'Password must be at least 6 characters');
+                    return false;
+                }
+                this.clearError(this.elements.password);
+                return true;
+            },
+
+            isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            },
+
+            showError(field, message) {
+                const errorElement = document.getElementById(field.id + 'Error');
+                field.classList.add('input-error', 'shake');
+                errorElement.textContent = message;
+                errorElement.classList.remove('hidden');
+                
+                setTimeout(() => {
+                    field.classList.remove('shake');
+                }, 500);
+            },
+
+            clearError(field) {
+                const errorElement = document.getElementById(field.id + 'Error');
+                field.classList.remove('input-error');
+                errorElement.classList.add('hidden');
+            },
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                // Check security lockout
+                try {
+                    SecurityManager.checkLockout();
+                } catch (error) {
+                    SessionManager.showNotification(error.message, 'error');
+                    return;
+                }
+
+                const isEmailValid = this.validateEmail();
+                const isPasswordValid = this.validatePassword();
+                
+                if (!isEmailValid || !isPasswordValid) {
+                    return;
+                }
+
+                await this.performLogin();
+            },
+
+            async performLogin() {
+                const email = this.elements.email.value.trim();
+                const password = this.elements.password.value;
+                const rememberMe = document.getElementById('remember').checked;
+
+                // Set loading state
+                this.setLoadingState(true);
+
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (error) throw error;
+
+                    // Store email if remember me is checked
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedEmail', email);
+                    } else {
+                        localStorage.removeItem('rememberedEmail');
+                    }
+
+                    // Handle successful authentication
+                    await SessionManager.handleSuccessfulAuth(data.session);
+
+                } catch (error) {
+                    console.error('Login error:', error);
+                    SecurityManager.recordFailedAttempt();
+                    this.handleLoginError(error);
+                } finally {
+                    this.setLoadingState(false);
+                }
+            },
+
+            setLoadingState(isLoading) {
+                this.elements.submitButton.disabled = isLoading;
+                if (isLoading) {
+                    this.elements.submitButton.innerHTML = '<div class="loading mr-2"></div> Signing In...';
+                } else {
+                    this.elements.submitButton.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Sign In';
+                }
+            },
+
+            handleLoginError(error) {
+                let message = 'Login failed. Please try again.';
+                
+                switch (error.message) {
+                    case 'Invalid login credentials':
+                        message = 'Invalid email or password';
+                        break;
+                    case 'Email not confirmed':
+                        message = 'Please verify your email before logging in';
+                        break;
+                    case 'Too many requests':
+                        message = 'Too many attempts. Please try again later.';
+                        break;
+                    default:
+                        message = error.message || 'Login failed';
+                }
+                
+                SessionManager.showNotification(message, 'error');
+            }
+        };
+
+        // Utility Functions
+        function togglePasswordVisibility() {
+            const icon = document.querySelector('#password + .absolute button i');
+            if (FormManager.elements.password.type === 'password') {
+                FormManager.elements.password.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                FormManager.elements.password.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Login page initialized');
+            
+            // Clear any previous session data that might cause issues
+            sessionStorage.removeItem('redirecting');
+            
+            // Initialize form manager
+            FormManager.init();
+            
+            // Check for existing session
+            await SessionManager.checkExistingSession();
+        });
+
+        // Network status monitoring
+        window.addEventListener('online', () => {
+            console.log('Network connection restored');
+        });
+
+        window.addEventListener('offline', () => {
+            SessionManager.showNotification('Network connection lost', 'error');
+        });
+    </script>
+</body>
+</html>

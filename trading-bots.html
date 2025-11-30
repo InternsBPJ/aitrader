@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Bots - AiTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(30, 58, 138, 0.3);
+            border-radius: 50%;
+            border-top-color: #1e3a8a;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .insufficient-balance {
+            opacity: 0.6;
+            position: relative;
+        }
+        .insufficient-balance::after {
+            content: "Insufficient Balance";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .profit-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .bot-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 24px;
+        }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .success-rate-bar {
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            background-color: #e5e7eb;
+        }
+        .success-rate-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+        }
+        .transaction-item:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+        .balance-pulse {
+            animation: balancePulse 2s ease-in-out;
+        }
+        @keyframes balancePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">AiTrader</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 bg-blue-700 text-white rounded-lg">
+                <i class="fas fa-robot mr-3"></i>Trading Bots
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-wallet mr-3"></i>My Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="text-green-400 font-semibold">Trading Bots</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="hover:text-green-300 transition-colors">My Investments</a>
+                    <a href="transactions.html" class="hover:text-green-300 transition-colors">Transactions</a>
+                    <a href="deposit.html" class="hover:text-green-300 transition-colors">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white balance-pulse" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="trading-bots.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-robot text-lg mb-1"></i>
+                <span class="text-xs">Bots</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading trading bots...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">AI Trading Bots</h1>
+            <p class="text-gray-600 text-sm lg:text-base">Choose from our advanced AI-powered trading bots with daily returns. Each bot generates consistent profits daily.</p>
+        </div>
+
+        <!-- Current Balance Banner -->
+        <div id="balanceBanner" class="bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl p-4 mb-6 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="text-blue-100 text-sm">Available Balance</p>
+                    <p class="text-xl lg:text-2xl font-bold text-white balance-pulse" id="currentBalance">UGX 0</p>
+                    <p class="text-blue-200 text-xs mt-1" id="balanceStatus">
+                        <i class="fas fa-sync-alt mr-1"></i>Synced with Transactions
+                    </p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="deposit.html" class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-semibold transition-colors whitespace-nowrap shadow-sm text-sm">
+                        <i class="fas fa-plus-circle mr-2"></i>Add Funds
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Bots Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12" id="botsGrid">
+            <!-- Bots will be loaded here dynamically -->
+            <div class="text-center py-8">
+                <i class="fas fa-circle-notch fa-spin text-xl mb-3 text-gray-500"></i>
+                <div class="text-gray-500 text-sm">Loading trading bots...</div>
+            </div>
+        </div>
+
+        <!-- Investment Modal -->
+        <div id="investmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-white rounded-xl p-4 lg:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+                <h3 class="text-xl lg:text-2xl font-bold mb-4 navy-blue-text" id="modalTitle">Invest in Starter Bot</h3>
+                
+                <form id="investmentForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium text-sm">Investment Amount (UGX)</label>
+                            <input 
+                                type="number" 
+                                id="investmentAmount"
+                                required
+                                class="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                placeholder="Enter amount"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                            >
+                            <p class="text-xs text-gray-500 mt-1" id="minAmountText">Minimum: UGX 10,000</p>
+                            <p class="text-xs text-gray-500 mt-1 hidden" id="maxAmountText">Maximum: UGX 4,500,000</p>
+                            <p class="text-xs text-red-500 mt-1 hidden" id="errorText"></p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium text-sm">Available Balance</label>
+                            <div class="bg-gray-100 rounded-lg px-4 py-3 text-green-600 font-semibold text-sm" id="availableBalance">
+                                UGX 0
+                            </div>
+                        </div>
+
+                        <!-- Investment Details -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-chart-line text-blue-500 mr-2 text-sm"></i>
+                                <span class="text-blue-600 font-semibold text-sm">Expected Returns</span>
+                            </div>
+                            <div class="space-y-2 text-xs">
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">Daily Return:</span>
+                                    <span class="text-green-600 font-semibold" id="dailyReturn">10%</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">Daily Profit:</span>
+                                    <span class="text-green-600 font-semibold" id="dailyProfit">UGX 0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">Investment Period:</span>
+                                    <span class="text-blue-700" id="investmentPeriod">10 Days</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-blue-700">Total Return:</span>
+                                    <span class="text-green-600 font-semibold" id="totalReturn">UGX 0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button 
+                                type="button"
+                                onclick="closeModal()"
+                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-4 rounded-lg transition duration-200 shadow-sm text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit"
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm text-sm"
+                                id="confirmInvestBtn"
+                            >
+                                Confirm Investment
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Balance Synchronization Manager
+        const BalanceManager = {
+            currentBalance: 0,
+            lastBalance: 0,
+
+            // Update balance across all UI elements
+            updateBalance(balance) {
+                const formattedBalance = `UGX ${parseFloat(balance).toLocaleString()}`;
+                const balanceElements = [
+                    'currentBalance',
+                    'availableBalance',
+                    'headerBalance',
+                    'mobileBalance'
+                ];
+
+                // Store previous balance for comparison
+                this.lastBalance = this.currentBalance;
+                this.currentBalance = balance;
+
+                // Update all balance elements
+                balanceElements.forEach(elementId => {
+                    const element = document.getElementById(elementId);
+                    if (element) {
+                        element.textContent = formattedBalance;
+                    }
+                });
+
+                // Add visual feedback for balance changes
+                if (this.lastBalance !== 0 && balance !== this.lastBalance) {
+                    this.showBalanceChange(balance);
+                }
+
+                console.log(`💰 Balance updated: ${formattedBalance}`);
+            },
+
+            // Show visual feedback for balance changes
+            showBalanceChange(newBalance) {
+                const balanceElement = document.getElementById('currentBalance');
+                const balanceBanner = document.getElementById('balanceBanner');
+                const balanceStatus = document.getElementById('balanceStatus');
+
+                if (balanceElement && balanceBanner) {
+                    // Add pulse animation
+                    balanceElement.classList.add('balance-pulse');
+                    
+                    // Update status message
+                    if (balanceStatus) {
+                        const change = newBalance - this.lastBalance;
+                        const changeType = change > 0 ? 'increase' : 'decrease';
+                        const changeAmount = Math.abs(change).toLocaleString();
+                        
+                        balanceStatus.innerHTML = change > 0 ? 
+                            `<i class="fas fa-arrow-up text-green-300 mr-1"></i>+UGX ${changeAmount} from Transactions` :
+                            `<i class="fas fa-arrow-down text-red-300 mr-1"></i>-UGX ${changeAmount} from Transactions`;
+                        
+                        // Reset status after 5 seconds
+                        setTimeout(() => {
+                            balanceStatus.innerHTML = `<i class="fas fa-sync-alt mr-1"></i>Synced with Transactions`;
+                        }, 5000);
+                    }
+
+                    // Remove animation class after animation completes
+                    setTimeout(() => {
+                        balanceElement.classList.remove('balance-pulse');
+                    }, 2000);
+                }
+            },
+
+            // Get current balance from user profile
+            async refreshBalance(userId) {
+                try {
+                    if (!userId) return 0;
+
+                    const { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('balance')
+                        .eq('id', userId)
+                        .single();
+
+                    if (!error && profile) {
+                        this.updateBalance(profile.balance || 0);
+                        return profile.balance || 0;
+                    }
+                } catch (error) {
+                    console.error('❌ Error refreshing balance:', error);
+                }
+                return 0;
+            }
+        };
+
+        // Shared Authentication Manager
+        const AuthManager = {
+            currentUser: null,
+            isAuthenticated: false,
+
+            async init() {
+                await this.checkAuthentication();
+            },
+
+            async checkAuthentication() {
+                console.log('🔐 Checking authentication...');
+                
+                try {
+                    // Check Supabase session first
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error || !session) {
+                        console.log('❌ No valid authentication found');
+                        this.redirectToLogin();
+                        return false;
+                    }
+
+                    console.log('🔑 Found Supabase session');
+
+                    // Get user data from profiles table
+                    const { data: userData, error: userError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (userError || !userData) {
+                        console.warn('⚠️ Profile not found, creating default...');
+                        this.currentUser = await this.createDefaultProfile(session.user);
+                    } else {
+                        this.currentUser = userData;
+                    }
+
+                    this.isAuthenticated = true;
+                    
+                    // Store user data for other pages
+                    sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                    localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                    
+                    console.log('✅ Authentication successful for user:', this.currentUser.email);
+                    return true;
+
+                } catch (error) {
+                    console.error('🔒 Authentication check failed:', error);
+                    this.redirectToLogin();
+                    return false;
+                }
+            },
+
+            async createDefaultProfile(user) {
+                const defaultProfile = {
+                    id: user.id,
+                    email: user.email,
+                    username: `user_${user.id.substring(0, 8)}`,
+                    full_name: user.email.split('@')[0] || 'Trader',
+                    balance: 0,
+                    total_returns: 0,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    last_login: new Date().toISOString()
+                };
+
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .insert([defaultProfile])
+                        .select()
+                        .single();
+
+                    if (error) {
+                        console.warn('⚠️ Profile creation failed, using local profile:', error);
+                        return defaultProfile;
+                    }
+
+                    console.log('✅ Default profile created');
+                    return data;
+                } catch (error) {
+                    console.warn('⚠️ Profile creation error, using local profile:', error);
+                    return defaultProfile;
+                }
+            },
+
+            redirectToLogin() {
+                console.log('🔄 Redirecting to login...');
+                this.clearAuthData();
+                window.location.href = 'login.html';
+            },
+
+            clearAuthData() {
+                sessionStorage.removeItem('currentUser');
+                localStorage.removeItem('currentUser');
+                this.currentUser = null;
+                this.isAuthenticated = false;
+            },
+
+            async logout() {
+                try {
+                    console.log('🚪 Logging out...');
+                    
+                    // Sign out from Supabase
+                    const { error } = await supabase.auth.signOut();
+                    if (error) {
+                        console.error('❌ Supabase logout error:', error);
+                    }
+                    
+                    // Clear all local storage
+                    this.clearAuthData();
+                    
+                    console.log('✅ Logout successful');
+                    window.location.href = 'login.html';
+                    
+                } catch (error) {
+                    console.error('❌ Logout error:', error);
+                    window.location.href = 'login.html';
+                }
+            }
+        };
+
+        // Trading Bots Manager with Balance Sync
+        const TradingBotsManager = {
+            currentUser: null,
+            currentBot: null,
+            availableBots: [],
+
+            async init() {
+                try {
+                    console.log('🚀 Initializing trading bots page...');
+                    
+                    // Check authentication first
+                    await AuthManager.init();
+                    
+                    if (!AuthManager.isAuthenticated) {
+                        return;
+                    }
+
+                    this.currentUser = AuthManager.currentUser;
+                    
+                    // Initialize balance manager with current user balance
+                    BalanceManager.updateBalance(this.currentUser.balance || 0);
+                    
+                    // Show main content
+                    this.showMainContent();
+                    
+                    // Load trading bots from database
+                    await this.loadTradingBots();
+                    
+                    // Update UI with loaded data
+                    this.updateUserInterface();
+                    
+                    // Set up real-time subscriptions
+                    this.setupRealtimeSubscription();
+                    
+                    console.log('✅ Trading bots page initialized successfully');
+                    
+                } catch (error) {
+                    console.error('❌ Trading bots page initialization failed:', error);
+                    this.showNotification('Error loading trading bots', 'error');
+                }
+            },
+
+            async loadTradingBots() {
+                try {
+                    console.log('🤖 Loading trading bots from database...');
+                    
+                    const { data: bots, error } = await supabase
+                        .from('trading_bots')
+                        .select('*')
+                        .eq('status', 'active')
+                        .order('min_investment');
+
+                    if (error) {
+                        console.error('❌ Error loading trading bots:', error);
+                        this.showNotification('Failed to load trading bots', 'error');
+                        this.availableBots = [];
+                    } else {
+                        console.log(`✅ Loaded ${bots.length} trading bots from database`);
+                        this.availableBots = bots || [];
+                    }
+
+                    this.displayTradingBots();
+
+                } catch (error) {
+                    console.error('❌ Error loading trading bots:', error);
+                    this.availableBots = [];
+                    this.displayTradingBots();
+                }
+            },
+
+            displayTradingBots() {
+                const grid = document.getElementById('botsGrid');
+                if (!grid) return;
+
+                if (this.availableBots.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-3 text-center py-8">
+                            <i class="fas fa-robot text-3xl mb-3 text-gray-400"></i>
+                            <h3 class="text-lg font-semibold text-gray-600 mb-2">No Trading Bots Available</h3>
+                            <p class="text-gray-500 text-sm">Check back later for new trading opportunities.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                grid.innerHTML = this.availableBots.map(bot => {
+                    const balance = BalanceManager.currentBalance || 0;
+                    const canInvest = balance >= bot.min_investment;
+                    
+                    // Calculate total return percentage
+                    const totalReturn = bot.daily_return * bot.period;
+                    
+                    // Get bot color based on risk level
+                    const color = this.getBotColor(bot.risk_level);
+                    const colorClasses = {
+                        blue: 'bg-blue-500',
+                        green: 'bg-green-500',
+                        purple: 'bg-purple-500',
+                        yellow: 'bg-yellow-500',
+                        indigo: 'bg-indigo-500',
+                        red: 'bg-red-500'
+                    };
+                    
+                    const buttonColors = {
+                        blue: 'bg-blue-600 hover:bg-blue-700',
+                        green: 'bg-green-600 hover:bg-green-700',
+                        purple: 'bg-purple-600 hover:bg-purple-700',
+                        yellow: 'bg-yellow-600 hover:bg-yellow-700',
+                        indigo: 'bg-indigo-600 hover:bg-indigo-700',
+                        red: 'bg-red-600 hover:bg-red-700'
+                    };
+
+                    return `
+                        <div class="bg-white rounded-xl p-4 card-hover shadow-sm border border-gray-200 relative ${!canInvest ? 'insufficient-balance' : ''}" id="${bot.id}BotCard">
+                            ${bot.risk_level === 'Low' ? `
+                                <div class="absolute top-3 right-3">
+                                    <span class="bg-green-500 text-white text-xs px-2 py-1 rounded">BEGINNER</span>
+                                </div>
+                            ` : ''}
+                            ${bot.risk_level === 'High' ? `
+                                <div class="absolute top-3 right-3">
+                                    <span class="bg-red-500 text-white text-xs px-2 py-1 rounded">ADVANCED</span>
+                                </div>
+                            ` : ''}
+                            ${bot.risk_level === 'Very High' ? `
+                                <div class="absolute top-3 right-3">
+                                    <span class="bg-red-600 text-white text-xs px-2 py-1 rounded">EXPERT</span>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="text-center mb-4">
+                                <div class="bot-icon ${colorClasses[color] || 'bg-gray-500'}">
+                                    <i class="${this.getBotIcon(bot.risk_level)} text-white"></i>
+                                </div>
+                                <h3 class="text-lg font-bold mb-2 navy-blue-text">${bot.name}</h3>
+                                <p class="text-gray-600 text-xs mb-2">${bot.description || 'AI-powered trading bot'}</p>
+                                <div class="bg-green-100 text-green-600 rounded-full px-3 py-1 text-xs font-semibold profit-badge">
+                                    ${this.getProfitEmoji(bot.daily_return)} ${bot.daily_return}% Daily
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3 mb-4">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Min. Investment</span>
+                                    <span class="font-semibold navy-blue-text">UGX ${bot.min_investment.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Max. Investment</span>
+                                    <span class="font-semibold navy-blue-text">UGX ${bot.max_investment.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Daily Return</span>
+                                    <span class="text-green-600 font-semibold">${bot.daily_return}%</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Investment Period</span>
+                                    <span class="font-semibold navy-blue-text">${bot.period} Days</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Total Return</span>
+                                    <span class="text-green-600 font-semibold">${totalReturn}%</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Risk Level</span>
+                                    <span class="${this.getRiskColor(bot.risk_level)} font-semibold">${bot.risk_level}</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">Success Rate</span>
+                                        <span class="font-semibold navy-blue-text">${bot.success_rate}%</span>
+                                    </div>
+                                    <div class="success-rate-bar">
+                                        <div class="success-rate-fill ${this.getSuccessRateColor(bot.success_rate)}" style="width: ${bot.success_rate}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button 
+                                onclick="TradingBotsManager.investInBot('${bot.id}')"
+                                class="w-full ${canInvest ? buttonColors[color] || 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'} text-white font-semibold py-3 px-4 rounded-lg transition duration-200 shadow-sm text-sm"
+                                id="${bot.id}BotBtn"
+                                ${!canInvest ? 'disabled' : ''}
+                            >
+                                ${canInvest ? 'Invest Now' : 'Insufficient Balance'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            getBotColor(riskLevel) {
+                switch(riskLevel) {
+                    case 'Low': return 'blue';
+                    case 'Medium': return 'green';
+                    case 'High': return 'yellow';
+                    case 'Very High': return 'red';
+                    default: return 'blue';
+                }
+            },
+
+            getBotIcon(riskLevel) {
+                switch(riskLevel) {
+                    case 'Low': return 'fas fa-bolt';
+                    case 'Medium': return 'fas fa-chart-line';
+                    case 'High': return 'fas fa-rocket';
+                    case 'Very High': return 'fas fa-robot';
+                    default: return 'fas fa-robot';
+                }
+            },
+
+            getProfitEmoji(dailyReturn) {
+                if (dailyReturn >= 40) return '🚨';
+                if (dailyReturn >= 30) return '🏆';
+                if (dailyReturn >= 20) return '⚡';
+                if (dailyReturn >= 15) return '🚀';
+                return '🔥';
+            },
+
+            getRiskColor(riskLevel) {
+                switch(riskLevel) {
+                    case 'Low': return 'text-green-600';
+                    case 'Medium': return 'text-yellow-600';
+                    case 'High': return 'text-orange-600';
+                    case 'Very High': return 'text-red-600';
+                    default: return 'text-gray-600';
+                }
+            },
+            
+            getSuccessRateColor(successRate) {
+                if (successRate >= 90) return 'bg-green-500';
+                if (successRate >= 85) return 'bg-blue-500';
+                if (successRate >= 80) return 'bg-yellow-500';
+                return 'bg-red-500';
+            },
+
+            updateUserInterface() {
+                const welcomeElement = document.getElementById('userWelcome');
+                const mobileWelcomeElement = document.getElementById('mobileUserWelcome');
+
+                if (welcomeElement) {
+                    const welcomeName = this.currentUser.full_name || this.currentUser.username || 'Trader';
+                    welcomeElement.textContent = `Welcome, ${welcomeName}`;
+                }
+                if (mobileWelcomeElement) {
+                    const welcomeName = this.currentUser.full_name || this.currentUser.username || 'Trader';
+                    mobileWelcomeElement.textContent = `Welcome, ${welcomeName}`;
+                }
+            },
+
+            investInBot(botId) {
+                const bot = this.availableBots.find(b => b.id === botId);
+                if (!bot) return;
+
+                this.currentBot = bot;
+                
+                const modal = document.getElementById('investmentModal');
+                const title = document.getElementById('modalTitle');
+                const minAmountText = document.getElementById('minAmountText');
+                const maxAmountText = document.getElementById('maxAmountText');
+                const availableBalance = document.getElementById('availableBalance');
+                const dailyReturn = document.getElementById('dailyReturn');
+                const dailyProfit = document.getElementById('dailyProfit');
+                const investmentPeriod = document.getElementById('investmentPeriod');
+                const totalReturn = document.getElementById('totalReturn');
+                const investmentAmount = document.getElementById('investmentAmount');
+                const errorText = document.getElementById('errorText');
+
+                title.textContent = `Invest in ${bot.name}`;
+                minAmountText.textContent = `Minimum: UGX ${bot.min_investment.toLocaleString()}`;
+                maxAmountText.textContent = `Maximum: UGX ${bot.max_investment.toLocaleString()}`;
+                maxAmountText.classList.remove('hidden');
+                
+                const balance = BalanceManager.currentBalance;
+                availableBalance.textContent = `UGX ${balance.toLocaleString()}`;
+                
+                dailyReturn.textContent = `${bot.daily_return}%`;
+                investmentPeriod.textContent = `${bot.period} Days`;
+
+                const defaultAmount = Math.max(bot.min_investment, Math.min(bot.min_investment, balance));
+                this.updateReturnsCalculation(defaultAmount, bot);
+
+                investmentAmount.value = defaultAmount;
+                investmentAmount.min = bot.min_investment;
+                investmentAmount.max = Math.min(bot.max_investment, balance);
+
+                errorText.classList.add('hidden');
+
+                const confirmBtn = document.getElementById('confirmInvestBtn');
+                if (balance < bot.min_investment) {
+                    confirmBtn.disabled = true;
+                } else {
+                    confirmBtn.disabled = false;
+                }
+
+                modal.classList.remove('hidden');
+            },
+
+            updateReturnsCalculation(amount, bot) {
+                const dailyProfitElement = document.getElementById('dailyProfit');
+                const totalReturnElement = document.getElementById('totalReturn');
+                
+                const dailyProfitAmount = (amount * bot.daily_return) / 100;
+                const totalReturnAmount = (amount * bot.daily_return * bot.period) / 100;
+                
+                dailyProfitElement.textContent = `UGX ${Math.round(dailyProfitAmount).toLocaleString()}`;
+                totalReturnElement.textContent = `UGX ${Math.round(totalReturnAmount).toLocaleString()}`;
+            },
+
+            async processInvestment(amount) {
+                try {
+                    if (!this.currentBot) {
+                        throw new Error('No bot selected');
+                    }
+
+                    const investmentAmount = amount;
+
+                    // Validation checks
+                    if (BalanceManager.currentBalance < investmentAmount) {
+                        throw new Error('Insufficient balance');
+                    }
+
+                    if (investmentAmount < this.currentBot.min_investment) {
+                        throw new Error(`Minimum investment is UGX ${this.currentBot.min_investment.toLocaleString()}`);
+                    }
+
+                    if (this.currentBot.max_investment && investmentAmount > this.currentBot.max_investment) {
+                        throw new Error(`Maximum investment is UGX ${this.currentBot.max_investment.toLocaleString()}`);
+                    }
+
+                    // Create investment in Supabase
+                    const { data: investment, error } = await supabase
+                        .from('investments')
+                        .insert([{
+                            user_id: this.currentUser.id,
+                            bot_id: this.currentBot.id,
+                            bot_name: this.currentBot.name,
+                            amount: investmentAmount,
+                            initial_amount: investmentAmount,
+                            daily_return: this.currentBot.daily_return,
+                            period: this.currentBot.period,
+                            returns: 0,
+                            total_returns: 0,
+                            days_completed: 0,
+                            status: 'active',
+                            start_date: new Date().toISOString(),
+                            last_return_date: new Date().toISOString()
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+
+                    // Update user balance in profiles table
+                    const newBalance = BalanceManager.currentBalance - investmentAmount;
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({ balance: newBalance })
+                        .eq('id', this.currentUser.id);
+
+                    if (updateError) throw updateError;
+
+                    // Record transaction
+                    await supabase
+                        .from('transactions')
+                        .insert([{
+                            user_id: this.currentUser.id,
+                            type: 'investment',
+                            amount: -investmentAmount,
+                            description: `Investment in ${this.currentBot.name}`,
+                            status: 'completed',
+                            reference: `INV${Date.now()}`,
+                            method: 'balance',
+                            created_at: new Date().toISOString()
+                        }]);
+
+                    // Update local balance
+                    BalanceManager.updateBalance(newBalance);
+                    this.displayTradingBots();
+
+                    return {
+                        success: true,
+                        newBalance: newBalance,
+                        investment: investment
+                    };
+
+                } catch (error) {
+                    console.error('Investment processing error:', error);
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                }
+            },
+
+            showMainContent() {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+            },
+
+            setupRealtimeSubscription() {
+                if (!this.currentUser?.id) return;
+
+                // Subscribe to profile changes (balance updates)
+                supabase
+                    .channel('profile-changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'profiles',
+                            filter: `id=eq.${this.currentUser.id}`
+                        },
+                        (payload) => {
+                            console.log('🔄 Profile updated:', payload);
+                            const newBalance = payload.new.balance || 0;
+                            
+                            // Update balance manager
+                            BalanceManager.updateBalance(newBalance);
+                            
+                            // Update current user data
+                            this.currentUser.balance = newBalance;
+                            AuthManager.currentUser.balance = newBalance;
+                            
+                            // Refresh bots display to update investment eligibility
+                            this.displayTradingBots();
+                        }
+                    )
+                    .subscribe();
+
+                // Subscribe to transaction changes (for deposits/withdrawals)
+                supabase
+                    .channel('transaction-changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'INSERT',
+                            schema: 'public',
+                            table: 'transactions',
+                            filter: `user_id=eq.${this.currentUser.id}`
+                        },
+                        (payload) => {
+                            console.log('🔄 New transaction:', payload);
+                            // Refresh balance when new transactions occur
+                            BalanceManager.refreshBalance(this.currentUser.id);
+                        }
+                    )
+                    .subscribe();
+            },
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-600' : 
+                    type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                } text-white max-w-sm`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            }
+        };
+
+        // Global functions for modal handling
+        function closeModal() {
+            document.getElementById('investmentModal').classList.add('hidden');
+            TradingBotsManager.currentBot = null;
+        }
+
+        // Handle investment form submission
+        document.getElementById('investmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('investmentAmount').value);
+            const errorText = document.getElementById('errorText');
+            
+            if (!TradingBotsManager.currentBot) {
+                errorText.textContent = 'Please select a trading bot';
+                errorText.classList.remove('hidden');
+                return;
+            }
+
+            const button = e.target.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<div class="loading mr-2"></div> Processing...';
+            errorText.classList.add('hidden');
+
+            try {
+                const result = await TradingBotsManager.processInvestment(amount);
+                
+                if (result.success) {
+                    TradingBotsManager.showNotification(
+                        `Successfully invested UGX ${amount.toLocaleString()} in ${TradingBotsManager.currentBot.name}!`, 
+                        'success'
+                    );
+                    
+                    closeModal();
+                    
+                    setTimeout(() => {
+                        if (confirm(`Investment successful! Your new balance is UGX ${result.newBalance.toLocaleString()}. Would you like to view your investments?`)) {
+                            window.location.href = 'investments.html';
+                        } else {
+                            window.location.reload();
+                        }
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Investment failed');
+                }
+            } catch (error) {
+                console.error('Investment error:', error);
+                errorText.textContent = error.message;
+                errorText.classList.remove('hidden');
+                TradingBotsManager.showNotification(error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        });
+
+        // Update returns calculation in real-time when amount changes
+        document.getElementById('investmentAmount').addEventListener('input', function() {
+            const amount = parseFloat(this.value) || 0;
+            const bot = TradingBotsManager.currentBot;
+            const currentBalance = BalanceManager.currentBalance;
+            const confirmBtn = document.getElementById('confirmInvestBtn');
+            const errorText = document.getElementById('errorText');
+            
+            if (bot) {
+                TradingBotsManager.updateReturnsCalculation(amount, bot);
+                
+                let error = '';
+                
+                if (amount < bot.min_investment) {
+                    error = `Minimum investment is UGX ${bot.min_investment.toLocaleString()}`;
+                } else if (bot.max_investment && amount > bot.max_investment) {
+                    error = `Maximum investment is UGX ${bot.max_investment.toLocaleString()}`;
+                } else if (amount > currentBalance) {
+                    error = 'Amount exceeds available balance';
+                }
+                
+                if (error) {
+                    confirmBtn.disabled = true;
+                    errorText.textContent = error;
+                    errorText.classList.remove('hidden');
+                } else {
+                    confirmBtn.disabled = false;
+                    errorText.classList.add('hidden');
+                }
+            }
+        });
+
+        // Utility Functions
+        function logout() {
+            AuthManager.logout();
+        }
+
+        // Close mobile menu when clicking on backdrop
+        document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+
+        // Initialize Trading Bots when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🤖 DOM loaded, initializing trading bots...');
+            TradingBotsManager.init();
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Page became visible, refresh balance
+                console.log('🔄 Page visible, refreshing balance...');
+                if (TradingBotsManager.currentUser?.id) {
+                    BalanceManager.refreshBalance(TradingBotsManager.currentUser.id);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

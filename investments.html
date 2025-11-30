@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Investments - AiTrader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .status-pending { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .status-completed { background-color: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status-failed { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .status-processing { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .status-cancelled { background-color: rgba(107, 114, 128, 0.2); color: #6b7280; }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.open {
+            transform: translateX(0);
+        }
+        .backdrop {
+            display: none;
+        }
+        .backdrop.open {
+            display: block;
+        }
+        .navy-blue-bg {
+            background-color: #1e3a8a;
+        }
+        .navy-blue-text {
+            color: #1e3a8a;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .investment-card {
+            transition: all 0.3s ease;
+        }
+        .investment-card:hover {
+            background-color: #f8fafc;
+        }
+        .mobile-bottom-nav {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #e5e7eb;
+        }
+        .mobile-nav-item {
+            transition: all 0.3s ease;
+        }
+        .mobile-nav-item.active {
+            color: #1e3a8a;
+            transform: translateY(-2px);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        .profit-positive { color: #10b981; }
+        .profit-negative { color: #ef4444; }
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: live-pulse 2s infinite;
+        }
+        @keyframes live-pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .cream-bg {
+            background-color: #fef7ed;
+            border: 2px solid #fed7aa;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Mobile Menu Backdrop -->
+    <div id="mobileBackdrop" class="backdrop fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+
+    <!-- Mobile Side Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-64 navy-blue-bg z-50 p-4">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-xl text-white"></i>
+                <span class="text-xl font-bold text-white">AiTrader</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-300 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <a href="index.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            <a href="trading-bots.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-robot mr-3"></i>Traders
+            </a>
+            <a href="dashboard.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line mr-3"></i>Dashboard
+            </a>
+            <a href="investments.html" class="block py-3 px-4 bg-blue-700 text-white rounded-lg">
+                <i class="fas fa-wallet mr-3"></i> Investments
+            </a>
+            <a href="transactions.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-exchange-alt mr-3"></i>Transactions
+            </a>
+            <a href="deposit.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-down mr-3"></i>Deposit
+            </a>
+            <a href="withdraw.html" class="block py-3 px-4 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <i class="fas fa-arrow-up mr-3"></i>Withdraw
+            </a>
+        </nav>
+        <div class="absolute bottom-4 left-4 right-4">
+            <div class="border-t border-blue-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span id="mobileUserWelcome" class="block text-blue-200 text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-700 p-3 rounded-lg mb-3">
+                    <span class="text-blue-200 font-medium">Balance:</span>
+                    <span id="mobileBalance" class="text-white font-bold">UGX 0</span>
+                </div>
+                <button onclick="logout()" class="w-full text-left py-2 px-4 hover:bg-blue-700 text-red-300 hover:text-red-100 rounded-lg transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="navy-blue-bg text-white sticky top-0 z-40 shadow-md">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-6">
+                    <a href="trading-bots.html" class="hover:text-green-300 transition-colors">Traders</a>
+                    <a href="dashboard.html" class="hover:text-green-300 transition-colors">Dashboard</a>
+                    <a href="investments.html" class="text-green-400 font-semibold"> Investments</a>
+                    <a href="transactions.html" class="hover:text-green-300 transition-colors">Transactions</a>
+                    <a href="deposit.html" class="hover:text-green-300 transition-colors">Deposit</a>
+                    <a href="withdraw.html" class="hover:text-green-300 transition-colors">Withdraw</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Desktop Balance & User -->
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-green-400 text-xs">Balance</div>
+                            <div class="font-semibold text-white" id="headerBalance">UGX 0</div>
+                        </div>
+                        <span id="userWelcome" class="text-green-400">Welcome</span>
+                        <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-white transition-colors">Logout</button>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button onclick="openMobileMenu()" class="lg:hidden text-gray-300 hover:text-white p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 lg:hidden">
+        <div class="flex justify-around items-center py-3 px-4">
+            <a href="dashboard.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-chart-line text-lg mb-1"></i>
+                <span class="text-xs">Dashboard</span>
+            </a>
+            <a href="investments.html" class="mobile-nav-item active flex flex-col items-center text-blue-600 p-2">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Invest</span>
+            </a>
+            <a href="transactions.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-exchange-alt text-lg mb-1"></i>
+                <span class="text-xs">Transactions</span>
+            </a>
+            <a href="deposit.html" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs">Deposit</span>
+            </a>
+            <button onclick="openMobileMenu()" class="mobile-nav-item flex flex-col items-center text-gray-600 p-2">
+                <i class="fas fa-bars text-lg mb-1"></i>
+                <span class="text-xs">More</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-30">
+        <div class="text-center">
+            <div class="loading mx-auto mb-4" style="width: 40px; height: 40px; border: 3px solid rgba(30, 58, 138, 0.3); border-top-color: #1e3a8a;"></div>
+            <p class="text-gray-600">Loading your investments...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="container mx-auto px-4 py-4 pb-20 lg:pb-8 hidden">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl lg:text-4xl font-bold mb-2 navy-blue-text">My Investments</h1>
+            <p class="text-gray-600 text-sm lg:text-base">Track and manage your active trading investments</p>
+        </div>
+
+        <!-- Investment Stats -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Active Investments</p>
+                        <p class="text-lg lg:text-2xl font-bold text-green-600" id="activeInvestmentsCount">0</p>
+                    </div>
+                    <div class="bg-green-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-robot text-green-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">Currently running</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Total Invested</p>
+                        <p class="text-lg lg:text-2xl font-bold text-blue-600" id="totalInvested">UGX 0</p>
+                    </div>
+                    <div class="bg-blue-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-chart-line text-blue-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">Across all bots</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Total Returns</p>
+                        <p class="text-lg lg:text-2xl font-bold text-purple-600" id="totalReturns">UGX 0</p>
+                    </div>
+                    <div class="bg-purple-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-coins text-purple-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">From trading</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 card-hover border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-600 text-xs lg:text-sm">Today's Returns</p>
+                        <p class="text-lg lg:text-2xl font-bold text-yellow-600" id="todaysReturns">UGX 0</p>
+                    </div>
+                    <div class="bg-yellow-100 p-2 lg:p-3 rounded-lg">
+                        <i class="fas fa-bolt text-yellow-600 text-sm lg:text-base"></i>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-xs mt-1">Expected today</p>
+            </div>
+        </div>
+
+        <!-- Active Investments Section -->
+        <div class="bg-white rounded-xl p-4 mb-4 border border-gray-200 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 space-y-4 lg:space-y-0">
+                <div>
+                    <h2 class="text-lg lg:text-xl font-semibold mb-2 navy-blue-text">Active Investments</h2>
+                    <p class="text-gray-600 text-sm">Your currently running trading investments</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="flex items-center">
+                        <span class="live-indicator"></span>
+                        <span class="text-green-600 text-sm mr-4">Live Updates</span>
+                    </div>
+                    <button onclick="refreshInvestments()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Investments Grid -->
+            <div id="investmentsGrid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                <div class="text-center py-8 text-gray-500 col-span-full">
+                    <i class="fas fa-circle-notch fa-spin text-2xl mb-4"></i>
+                    <div>Loading your investments...</div>
+                </div>
+            </div>
+
+            <!-- No Investments Message -->
+            <div id="noInvestmentsMessage" class="text-center py-12 hidden">
+                <i class="fas fa-robot text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-semibold mb-2 text-gray-600">No Active Investments</h3>
+                <p class="text-gray-500 mb-6 text-sm">You don't have any active investments yet. Start earning daily returns by investing in our trading bots.</p>
+                <a href="trading-bots.html" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg transition-colors text-white text-sm inline-block">
+                    <i class="fas fa-plus-circle mr-2"></i>Explore Trading Bots
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Close Investment Modal -->
+    <div id="closeInvestmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="cream-bg rounded-xl p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h3 class="text-xl md:text-2xl font-bold text-amber-900">Close Investment</h3>
+                <button onclick="closeCloseInvestmentModal()" class="text-amber-700 hover:text-amber-900">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="closeInvestmentModalContent">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        let supabase;
+        
+        function initializeSupabase() {
+            const SUPABASE_URL = 'https://qzrbcmrxtvlhgohsczhr.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cmJjbXJ4dHZsaGdvaHNjemhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyMjczMDQsImV4cCI6MjA3OTgwMzMwNH0.3gSZTHyIoEmhrIWY-MzYgBvgB4JgiSzDXkU6sTpM11k';
+            
+            if (window.supabase && window.supabase.createClient) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } else {
+                console.error('Supabase JS library not loaded properly');
+                return false;
+            }
+            return true;
+        }
+
+        // Mobile Menu Functions
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileBackdrop').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Investments Manager
+        const InvestmentsManager = {
+            currentUser: null,
+            investments: [],
+            tradingBots: [],
+
+            async init() {
+                if (!initializeSupabase()) {
+                    this.showError('Failed to initialize database connection.');
+                    return;
+                }
+
+                this.currentUser = await this.getCurrentUser();
+                if (!this.currentUser) return;
+
+                this.updateUserInterface();
+                await this.loadTradingBots();
+                await this.loadInvestments();
+            },
+
+            async getCurrentUser() {
+                try {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    
+                    if (error || !session) {
+                        this.redirectToLogin();
+                        return null;
+                    }
+
+                    const { data: userProfile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching user profile:', profileError);
+                        return {
+                            id: session.user.id,
+                            email: session.user.email,
+                            fullName: session.user.email,
+                            balance: 0
+                        };
+                    }
+
+                    return {
+                        id: session.user.id,
+                        email: session.user.email,
+                        fullName: userProfile.full_name || session.user.email,
+                        balance: userProfile.balance || 0
+                    };
+
+                } catch (error) {
+                    console.error('Error getting user data:', error);
+                    this.redirectToLogin();
+                    return null;
+                }
+            },
+
+            redirectToLogin() {
+                alert('Please login to continue');
+                window.location.href = 'login.html';
+            },
+
+            updateUserInterface() {
+                const welcomeElement = document.getElementById('userWelcome');
+                const mobileWelcomeElement = document.getElementById('mobileUserWelcome');
+                if (welcomeElement) {
+                    welcomeElement.textContent = `Welcome, ${this.currentUser.fullName}`;
+                }
+                if (mobileWelcomeElement) {
+                    mobileWelcomeElement.textContent = `Welcome, ${this.currentUser.fullName}`;
+                }
+            },
+
+            async loadTradingBots() {
+                try {
+                    const { data: bots, error } = await supabase
+                        .from('trading_bots')
+                        .select('*')
+                        .eq('status', 'active');
+
+                    if (error) throw error;
+                    this.tradingBots = bots || [];
+                    console.log(`Loaded ${this.tradingBots.length} trading bots`);
+
+                } catch (error) {
+                    console.error('Error loading trading bots:', error);
+                    this.tradingBots = [];
+                }
+            },
+
+            async loadInvestments() {
+                try {
+                    if (!supabase) {
+                        throw new Error('Database not initialized');
+                    }
+
+                    // Show loading state
+                    const container = document.getElementById('investmentsGrid');
+                    if (container) {
+                        container.innerHTML = `
+                            <div class="text-center py-8 text-gray-500 col-span-full">
+                                <i class="fas fa-circle-notch fa-spin text-2xl mb-4"></i>
+                                <div>Loading your investments...</div>
+                            </div>
+                        `;
+                    }
+
+                    // Fetch investments from Supabase
+                    const { data: investments, error } = await supabase
+                        .from('investments')
+                        .select('*')
+                        .eq('user_id', this.currentUser.id)
+                        .in('status', ['active', 'running'])
+                        .order('created_at', { ascending: false });
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    console.log('Fetched investments:', investments);
+                    this.investments = investments || [];
+
+                    this.displayInvestments();
+                    this.calculateStats();
+                    this.updateBalanceDisplay();
+
+                    // Show main content
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Error loading investments:', error);
+                    this.showError('Failed to load investments. Please try again.');
+                }
+            },
+
+            displayInvestments() {
+                const container = document.getElementById('investmentsGrid');
+                const noInvestmentsMessage = document.getElementById('noInvestmentsMessage');
+                
+                if (!container || !noInvestmentsMessage) return;
+                
+                if (this.investments.length === 0) {
+                    container.classList.add('hidden');
+                    noInvestmentsMessage.classList.remove('hidden');
+                    return;
+                }
+
+                container.classList.remove('hidden');
+                noInvestmentsMessage.classList.add('hidden');
+
+                container.innerHTML = this.investments.map(inv => {
+                    const invested = inv.amount || 0;
+                    const returns = inv.total_returns || 0;
+                    const profit = returns - invested;
+                    const roi = invested > 0 ? ((profit / invested) * 100).toFixed(1) : 0;
+                    const profitClass = profit >= 0 ? 'profit-positive' : 'profit-negative';
+                    
+                    // Calculate progress
+                    const progress = inv.days_completed ? (inv.days_completed / inv.period) * 100 : 0;
+                    const daysLeft = inv.period - (inv.days_completed || 0);
+                    
+                    // Calculate next return
+                    const nextReturn = (invested * inv.daily_return) / 100;
+                    const nextReturnTime = this.getNextReturnTime(inv.last_return_date);
+                    
+                    // Get bot details
+                    const bot = this.tradingBots.find(b => b.id === inv.bot_id) || {};
+                    
+                    return `
+                        <div class="investment-card bg-white rounded-lg p-4 lg:p-6 border border-gray-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex-1">
+                                    <h3 class="text-lg lg:text-xl font-semibold text-gray-900 truncate">${bot.name || inv.bot_name || 'Trading Bot'}</h3>
+                                    <p class="text-gray-500 text-sm">Started ${new Date(inv.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div class="text-right ml-2">
+                                    <span class="px-2 lg:px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs lg:text-sm">
+                                        Active • ${inv.daily_return}% Daily
+                                    </span>
+                                    <div class="text-xs text-gray-500 mt-1">Day ${inv.days_completed || 0}/${inv.period}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mb-4">
+                                <div class="flex justify-between text-xs lg:text-sm text-gray-500 mb-1">
+                                    <span>Progress</span>
+                                    <span>${progress.toFixed(1)}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2 lg:h-3">
+                                    <div class="progress-bar h-2 lg:h-3 rounded-full" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Investment Details Grid -->
+                            <div class="grid grid-cols-2 gap-3 lg:gap-4 mb-4">
+                                <div class="text-center p-2 lg:p-3 bg-gray-50 rounded-lg">
+                                    <p class="text-gray-500 text-xs lg:text-sm">Invested</p>
+                                    <p class="font-semibold text-sm lg:text-base">UGX ${invested.toLocaleString()}</p>
+                                </div>
+                                <div class="text-center p-2 lg:p-3 bg-gray-50 rounded-lg">
+                                    <p class="text-gray-500 text-xs lg:text-sm">Daily Return</p>
+                                    <p class="font-semibold text-green-600 text-sm lg:text-base">${inv.daily_return}%</p>
+                                </div>
+                                <div class="text-center p-2 lg:p-3 bg-gray-50 rounded-lg">
+                                    <p class="text-gray-500 text-xs lg:text-sm">Earned</p>
+                                    <p class="font-semibold text-green-600 text-sm lg:text-base">UGX ${returns.toLocaleString()}</p>
+                                </div>
+                                <div class="text-center p-2 lg:p-3 bg-gray-50 rounded-lg">
+                                    <p class="text-gray-500 text-xs lg:text-sm">ROI</p>
+                                    <p class="font-semibold ${profitClass} text-sm lg:text-base">${roi}%</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Next Return Info -->
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 lg:p-4 mb-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="text-blue-700 text-xs lg:text-sm font-medium">Next Return</div>
+                                        <div class="text-green-600 font-semibold text-sm lg:text-base">UGX ${nextReturn.toLocaleString()}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-blue-700 text-xs lg:text-sm font-medium">Countdown</div>
+                                        <div class="text-blue-700 font-semibold text-xs lg:text-sm">${nextReturnTime}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-2 lg:space-y-0">
+                                <div class="text-xs lg:text-sm text-gray-500 text-center lg:text-left">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    ${daysLeft} days left • Daily: ${inv.daily_return}%
+                                </div>
+                                <div class="flex space-x-2 justify-center lg:justify-end">
+                                    <button onclick="viewInvestmentDetails('${inv.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm transition-colors">
+                                        <i class="fas fa-chart-line mr-1"></i>Details
+                                    </button>
+                                    <button onclick="InvestmentsManager.showCloseInvestmentModal('${inv.id}')" class="bg-red-600 hover:bg-red-700 text-white px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm transition-colors">
+                                        <i class="fas fa-times mr-1"></i>Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            calculateStats() {
+                const activeInvestments = this.investments.length;
+                
+                const totalInvested = this.investments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+                const totalReturns = this.investments.reduce((sum, inv) => sum + (inv.total_returns || 0), 0);
+                
+                // Calculate today's returns
+                const todaysReturns = this.investments.reduce((sum, inv) => {
+                    return sum + ((inv.amount * inv.daily_return) / 100);
+                }, 0);
+
+                // Update DOM elements
+                const activeInvestmentsEl = document.getElementById('activeInvestmentsCount');
+                const totalInvestedEl = document.getElementById('totalInvested');
+                const totalReturnsEl = document.getElementById('totalReturns');
+                const todaysReturnsEl = document.getElementById('todaysReturns');
+
+                if (activeInvestmentsEl) activeInvestmentsEl.textContent = activeInvestments;
+                if (totalInvestedEl) totalInvestedEl.textContent = `UGX ${totalInvested.toLocaleString()}`;
+                if (totalReturnsEl) totalReturnsEl.textContent = `UGX ${totalReturns.toLocaleString()}`;
+                if (todaysReturnsEl) todaysReturnsEl.textContent = `UGX ${todaysReturns.toLocaleString()}`;
+            },
+
+            updateBalanceDisplay() {
+                const headerBalanceEl = document.getElementById('headerBalance');
+                const mobileBalanceEl = document.getElementById('mobileBalance');
+
+                if (headerBalanceEl && this.currentUser) {
+                    headerBalanceEl.textContent = `UGX ${this.currentUser.balance.toLocaleString()}`;
+                }
+                if (mobileBalanceEl && this.currentUser) {
+                    mobileBalanceEl.textContent = `UGX ${this.currentUser.balance.toLocaleString()}`;
+                }
+            },
+
+            getNextReturnTime(lastReturnDate) {
+                if (!lastReturnDate) return "Soon!";
+                
+                try {
+                    const lastReturn = new Date(lastReturnDate);
+                    const now = new Date();
+                    const nextReturn = new Date(lastReturn);
+                    nextReturn.setHours(nextReturn.getHours() + 24);
+                    
+                    const timeDiff = nextReturn - now;
+                    
+                    if (timeDiff <= 0) {
+                        return "Any moment!";
+                    }
+                    
+                    const hoursLeft = Math.floor(timeDiff / (1000 * 60 * 60));
+                    const minutesLeft = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    if (hoursLeft > 0) {
+                        return `${hoursLeft}h ${minutesLeft}m`;
+                    } else {
+                        return `${minutesLeft}m`;
+                    }
+                } catch (error) {
+                    return "Soon!";
+                }
+            },
+
+            async showCloseInvestmentModal(investmentId) {
+                const investment = this.investments.find(inv => inv.id === investmentId);
+                if (!investment) {
+                    this.showNotification('Investment not found', 'error');
+                    return;
+                }
+
+                const investedAmount = investment.amount || 0;
+                const penalty = investedAmount * 0.10;
+                const returnedAmount = investedAmount - penalty;
+
+                const modal = document.getElementById('closeInvestmentModal');
+                const modalContent = document.getElementById('closeInvestmentModalContent');
+
+                if (!modal || !modalContent) return;
+
+                modalContent.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="text-amber-800">
+                            <p class="font-semibold mb-2">Are you sure you want to close this investment early?</p>
+                            <p class="text-sm mb-4">This action cannot be undone and a 10% penalty will be applied.</p>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg p-4 border border-amber-200">
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Original Investment:</span>
+                                    <span class="font-semibold">UGX ${investedAmount.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Early Closure Penalty (10%):</span>
+                                    <span class="font-semibold text-red-600">- UGX ${penalty.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between border-t border-amber-200 pt-2">
+                                    <span class="text-gray-600 font-semibold">Amount to be returned:</span>
+                                    <span class="font-bold text-green-600">UGX ${returnedAmount.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-3 pt-2">
+                            <button onclick="closeCloseInvestmentModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-3 rounded-lg transition-colors font-semibold">
+                                Cancel
+                            </button>
+                            <button onclick="InvestmentsManager.confirmCloseInvestment('${investmentId}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors font-semibold">
+                                Confirm Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.remove('hidden');
+            },
+
+            async confirmCloseInvestment(investmentId) {
+                try {
+                    const investment = this.investments.find(inv => inv.id === investmentId);
+                    if (!investment) {
+                        throw new Error('Investment not found');
+                    }
+
+                    const investedAmount = investment.amount || 0;
+                    const penalty = investedAmount * 0.10;
+                    const returnedAmount = investedAmount - penalty;
+
+                    // Update investment status in database
+                    const { data: updatedInvestment, error: updateError } = await supabase
+                        .from('investments')
+                        .update({ status: 'closed' })
+                        .eq('id', investmentId)
+                        .eq('user_id', this.currentUser.id)
+                        .select()
+                        .single();
+
+                    if (updateError) {
+                        throw new Error('Failed to update investment: ' + updateError.message);
+                    }
+
+                    // Update user balance
+                    const newBalance = (this.currentUser.balance || 0) + returnedAmount;
+                    const { error: balanceError } = await supabase
+                        .from('profiles')
+                        .update({ balance: newBalance })
+                        .eq('id', this.currentUser.id);
+
+                    if (balanceError) {
+                        console.error('Error updating balance:', balanceError);
+                    }
+
+                    // Create transaction record
+                    const { error: txError } = await supabase
+                        .from('transactions')
+                        .insert([{
+                            user_id: this.currentUser.id,
+                            type: 'investment_return',
+                            amount: returnedAmount,
+                            description: `Investment closed early - 10% penalty applied (UGX ${penalty.toLocaleString()}) - ${investment.bot_name || 'Trading Bot'}`,
+                            status: 'completed',
+                            reference: `CLS${Date.now()}`,
+                            created_at: new Date().toISOString()
+                        }]);
+
+                    if (txError) {
+                        console.error('Error creating transaction:', txError);
+                    }
+
+                    // Close modal and show success
+                    this.closeCloseInvestmentModal();
+                    this.showNotification(`Investment closed successfully! UGX ${returnedAmount.toLocaleString()} returned to your balance.`, 'success');
+
+                    // Reload investments and update UI
+                    await this.loadInvestments();
+                    this.currentUser.balance = newBalance;
+                    this.updateBalanceDisplay();
+
+                } catch (error) {
+                    console.error('Error closing investment:', error);
+                    this.showNotification('Failed to close investment: ' + error.message, 'error');
+                }
+            },
+
+            closeCloseInvestmentModal() {
+                const modal = document.getElementById('closeInvestmentModal');
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
+            },
+
+            showError(message) {
+                const container = document.getElementById('investmentsGrid');
+                if (!container) return;
+                
+                container.innerHTML = `
+                    <div class="text-center py-8 col-span-full">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-lg font-semibold mb-2 text-red-600">Error</h3>
+                        <p class="text-gray-600 mb-4 text-sm">${message}</p>
+                        <button onclick="InvestmentsManager.loadInvestments()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white text-sm">
+                            <i class="fas fa-redo mr-2"></i>Try Again
+                        </button>
+                    </div>
+                `;
+            },
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-600' : 
+                    type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                } text-white max-w-sm`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            }
+        };
+
+        // Utility Functions
+        async function logout() {
+            if (supabase) {
+                const { error } = await supabase.auth.signOut();
+            }
+            sessionStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        async function refreshInvestments() {
+            await InvestmentsManager.loadInvestments();
+            
+            // Show refresh feedback
+            const button = event.target;
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check mr-2"></i>Refreshed';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }, 2000);
+        }
+
+        function viewInvestmentDetails(investmentId) {
+            window.location.href = `investment-details.html?id=${investmentId}`;
+        }
+
+        function closeCloseInvestmentModal() {
+            InvestmentsManager.closeCloseInvestmentModal();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await InvestmentsManager.init();
+                console.log('Investments page initialized successfully');
+            } catch (error) {
+                console.error('Error initializing investments page:', error);
+                alert('Error loading investments. Please refresh the page.');
+            }
+        });
+
+        // Close mobile menu when clicking on backdrop
+        document.getElementById('mobileBackdrop').addEventListener('click', closeMobileMenu);
+
+        // Close modal when clicking outside
+        document.getElementById('closeInvestmentModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'closeInvestmentModal') {
+                closeCloseInvestmentModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AiTrader - AI-Powered Crypto & Forex Trading Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+        .hero-bg {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        .trading-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .trading-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .mobile-menu {
+            display: none;
+        }
+        .mobile-menu.active {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .desktop-nav {
+                display: none;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <nav class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-robot text-xl text-green-400"></i>
+                    <span class="text-xl font-bold">AiTrader</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="desktop-nav flex space-x-6">
+                    <a href="index.html" class="text-green-400 font-semibold">Home</a>
+                    <a href="trading-bots.html" class="hover:text-green-400 transition-colors">Trading Bots</a>
+                    <a href="forex.html" class="hover:text-green-400 transition-colors">Forex Trading</a>
+                    <a href="crypto.html" class="hover:text-green-400 transition-colors">Crypto Trading</a>
+                    <a href="pricing.html" class="hover:text-green-400 transition-colors">Pricing</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Mobile Menu Button -->
+                    <button class="mobile-menu-btn md:hidden text-xl">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Desktop Auth Buttons -->
+                    <div class="desktop-nav flex space-x-4">
+                        <a href="login.html" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition-colors">Login</a>
+                        <a href="register.html" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition-colors">Sign Up</a>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- Mobile Menu -->
+            <div class="mobile-menu md:hidden bg-gray-800 py-4 border-t border-gray-700">
+                <div class="flex flex-col space-y-4">
+                    <a href="index.html" class="text-green-400 font-semibold">Home</a>
+                    <a href="trading-bots.html" class="hover:text-green-400 transition-colors">Trading Bots</a>
+                    <a href="forex.html" class="hover:text-green-400 transition-colors">Forex Trading</a>
+                    <a href="crypto.html" class="hover:text-green-400 transition-colors">Crypto Trading</a>
+                    <a href="pricing.html" class="hover:text-green-400 transition-colors">Pricing</a>
+                    <div class="pt-4 border-t border-gray-700 flex space-x-4">
+                        <a href="login.html" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition-colors text-center flex-1">Login</a>
+                        <a href="register.html" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded transition-colors text-center flex-1">Sign Up</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-bg py-16 md:py-20">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                AI-Powered <span class="text-green-400">Trading</span> Revolution
+            </h1>
+            <p class="text-lg md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                Maximize your investments with our advanced AI trading bots. 
+                Automated, secure, and profitable trading in both cryptocurrency and forex markets.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="register.html" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition duration-200 transform hover:scale-105">
+                    Start Trading Now
+                </a>
+                <a href="trading-bots.html" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-4 px-8 rounded-lg text-lg transition duration-200">
+                    View Trading Bots
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trading Options Section -->
+    <section class="py-16 md:py-20 bg-gray-800">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Diversify Your Portfolio</h2>
+            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <div class="trading-card bg-gray-900 p-8 rounded-xl border border-gray-700">
+                    <div class="flex items-center mb-6">
+                        <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
+                            <i class="fab fa-bitcoin text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold">Cryptocurrency Trading</h3>
+                    </div>
+                    <p class="text-gray-400 mb-6">
+                        Our AI algorithms analyze hundreds of cryptocurrencies 24/7, identifying profitable opportunities in volatile markets. From Bitcoin to emerging altcoins, we maximize your returns.
+                    </p>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>24/7 market monitoring</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>Multi-exchange arbitrage</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>Risk-managed strategies</span>
+                        </li>
+                    </ul>
+                    <a href="crypto.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+                        Explore Crypto Trading
+                    </a>
+                </div>
+                
+                <div class="trading-card bg-gray-900 p-8 rounded-xl border border-gray-700">
+                    <div class="flex items-center mb-6">
+                        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold">Forex Trading</h3>
+                    </div>
+                    <p class="text-gray-400 mb-6">
+                        Leverage our AI to trade major, minor, and exotic currency pairs with precision. Our algorithms analyze economic indicators and market sentiment for optimal entry and exit points.
+                    </p>
+                    <ul class="space-y-3 mb-6">
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>Major & exotic pairs</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>Economic indicator analysis</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-check text-green-400 mr-2"></i>
+                            <span>Leverage management</span>
+                        </li>
+                    </ul>
+                    <a href="forex.html" class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+                        Explore Forex Trading
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-16 md:py-20 bg-gray-900">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Why Choose AiTrader?</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center bg-gray-800 p-8 rounded-xl">
+                    <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-brain text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Advanced AI Algorithms</h3>
+                    <p class="text-gray-400">
+                        Our neural networks analyze market patterns, news sentiment, and technical indicators to execute profitable trades automatically.
+                    </p>
+                </div>
+                <div class="text-center bg-gray-800 p-8 rounded-xl">
+                    <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-shield-alt text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Bank-Level Security</h3>
+                    <p class="text-gray-400">
+                        Military-grade encryption, cold storage for assets, and insured funds. Your investments are always protected.
+                    </p>
+                </div>
+                <div class="text-center bg-gray-800 p-8 rounded-xl">
+                    <div class="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-chart-line text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Proven Track Record</h3>
+                    <p class="text-gray-400">
+                        Join 15,000+ investors who have achieved consistent 15-25% monthly returns with our proven strategies.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-16 md:py-20 gradient-bg">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div>
+                    <div class="text-3xl md:text-4xl font-bold text-green-400 mb-2">$100M+</div>
+                    <div class="text-gray-300">Trading Volume</div>
+                </div>
+                <div>
+                    <div class="text-3xl md:text-4xl font-bold text-green-400 mb-2">15K+</div>
+                    <div class="text-gray-300">Active Investors</div>
+                </div>
+                <div>
+                    <div class="text-3xl md:text-4xl font-bold text-green-400 mb-2">24/7</div>
+                    <div class="text-gray-300">Trading Activity</div>
+                </div>
+                <div>
+                    <div class="text-3xl md:text-4xl font-bold text-green-400 mb-2">99.9%</div>
+                    <div class="text-gray-300">Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="py-16 md:py-20 bg-gray-800">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">What Our Investors Say</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gray-900 p-6 rounded-xl">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mr-4">
+                            <span class="font-bold">JD</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold">John D.</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-400">
+                        "I've tried multiple trading platforms, but AiTrader's AI algorithms are on another level. My portfolio has grown by 47% in just 3 months!"
+                    </p>
+                </div>
+                <div class="bg-gray-900 p-6 rounded-xl">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mr-4">
+                            <span class="font-bold">SM</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold">Sarah M.</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-400">
+                        "As someone new to trading, AiTrader made it so simple. The automated bots do all the work while I focus on my day job. Highly recommended!"
+                    </p>
+                </div>
+                <div class="bg-gray-900 p-6 rounded-xl">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mr-4">
+                            <span class="font-bold">RK</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold">Robert K.</h4>
+                            <div class="flex text-yellow-400">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-400">
+                        "The combination of crypto and forex trading has diversified my income streams. The AI adapts to market conditions better than any human trader."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 md:py-20 bg-gray-900">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Start Your Trading Journey?</h2>
+            <p class="text-lg md:text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+                Join thousands of successful investors and let our AI trading bots work for you 24/7. Start with as little as $100.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="register.html" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-8 rounded-lg text-lg transition duration-200 transform hover:scale-105">
+                    Get Started Today
+                </a>
+                <a href="pricing.html" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-4 px-8 rounded-lg text-lg transition duration-200">
+                    View Pricing Plans
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-800 py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-robot text-xl text-green-400"></i>
+                        <span class="text-xl font-bold">AiTrader</span>
+                    </div>
+                    <p class="text-gray-400">
+                        Advanced AI-powered cryptocurrency and forex trading platform for modern investors.
+                    </p>
+                    <div class="flex space-x-4 mt-4">
+                        <a href="#" class="text-gray-400 hover:text-green-400"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-green-400"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-green-400"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-green-400"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Platform</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="trading-bots.html" class="hover:text-green-400 transition-colors">Trading Bots</a></li>
+                        <li><a href="forex.html" class="hover:text-green-400 transition-colors">Forex Trading</a></li>
+                        <li><a href="crypto.html" class="hover:text-green-400 transition-colors">Crypto Trading</a></li>
+                        <li><a href="dashboard.html" class="hover:text-green-400 transition-colors">Dashboard</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Account</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="login.html" class="hover:text-green-400 transition-colors">Login</a></li>
+                        <li><a href="register.html" class="hover:text-green-400 transition-colors">Register</a></li>
+                        <li><a href="deposit.html" class="hover:text-green-400 transition-colors">Deposit</a></li>
+                        <li><a href="withdraw.html" class="hover:text-green-400 transition-colors">Withdraw</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Support</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Contact Us</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 AiTrader. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
+            document.querySelector('.mobile-menu').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
